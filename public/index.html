@@ -1,0 +1,2511 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bildauflösung & Speicherbedarf - GINF Lernkurs</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-light: #334155;
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+            --success: #22c55e;
+            --purple: #a855f7;
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .logo {
+            font-size: 1.4em;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .student-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .points-display {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid var(--secondary);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            color: var(--secondary);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .points-display:hover {
+            background: rgba(16, 185, 129, 0.3);
+        }
+        
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .progress-bar {
+            width: 200px;
+            height: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--secondary);
+            transition: width 0.5s ease;
+        }
+        
+        .progress-text {
+            font-size: 0.85em;
+            margin-top: 3px;
+        }
+        
+        .main-container {
+            display: flex;
+            min-height: calc(100vh - 70px);
+        }
+        
+        .sidebar {
+            width: 280px;
+            background: var(--bg-card);
+            padding: 20px;
+            border-right: 1px solid var(--bg-light);
+            overflow-y: auto;
+            flex-shrink: 0;
+            position: fixed;
+            top: 70px;
+            left: 0;
+            height: calc(100vh - 70px);
+            z-index: 90;
+        }
+        
+        .sidebar-spacer {
+            width: 280px;
+            flex-shrink: 0;
+        }
+        
+        .sidebar h3 {
+            color: var(--text-muted);
+            font-size: 0.8em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        
+        .module-list {
+            list-style: none;
+        }
+        
+        .module-item {
+            margin-bottom: 8px;
+        }
+        
+        .module-btn {
+            width: 100%;
+            padding: 12px 15px;
+            background: transparent;
+            border: 1px solid var(--bg-light);
+            border-radius: 8px;
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        
+        .module-btn:hover {
+            background: var(--bg-light);
+            border-color: var(--primary);
+        }
+        
+        .module-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .module-btn.completed {
+            border-color: var(--secondary);
+        }
+        
+        .module-btn.completed::after {
+            content: '✓';
+            margin-left: auto;
+            color: var(--secondary);
+        }
+        
+        .module-score {
+            margin-left: auto;
+            font-size: 0.8em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .module-score.passed { background: rgba(16, 185, 129, 0.3); color: var(--secondary); }
+        .module-score.failed { background: rgba(239, 68, 68, 0.3); color: var(--danger); }
+        
+        .content {
+            flex: 1;
+            padding: 30px;
+            padding-top: 100px; /* Platz für fixed calculator */
+            overflow-y: auto;
+            max-width: 1100px;
+            margin-left: 280px; /* Platz für fixed sidebar */
+        }
+        
+        .screen { display: none; }
+        .screen.active { display: block; }
+        
+        .welcome-hero {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-light) 100%);
+            border-radius: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .welcome-hero h1 {
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .welcome-hero p {
+            color: var(--text-muted);
+            font-size: 1.2em;
+            max-width: 600px;
+            margin: 0 auto 30px;
+        }
+        
+        .name-input-container {
+            text-align: center;
+            padding: 60px 20px;
+            background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-light) 100%);
+            border-radius: 20px;
+            max-width: 500px;
+            margin: 50px auto;
+        }
+        
+        .name-input-container h2 {
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+        
+        .name-input {
+            width: 100%;
+            max-width: 300px;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: 2px solid var(--bg-light);
+            border-radius: 10px;
+            background: var(--bg-dark);
+            color: var(--text);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .name-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #0ea572;
+        }
+        
+        .start-btn {
+            padding: 15px 40px;
+            font-size: 1.1em;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        
+        .section {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid var(--bg-light);
+        }
+        
+        .section h2 {
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            color: var(--accent);
+        }
+        
+        .section p {
+            margin-bottom: 15px;
+        }
+        
+        .theory-box {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .theory-box h4 {
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        
+        .formula-box {
+            background: var(--bg-dark);
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: var(--accent);
+            text-align: center;
+            margin: 15px 0;
+            border: 1px solid var(--bg-light);
+        }
+        
+        .tip-box {
+            background: rgba(16, 185, 129, 0.1);
+            border-left: 4px solid var(--secondary);
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .warning-box {
+            background: rgba(245, 158, 11, 0.1);
+            border-left: 4px solid var(--accent);
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        /* Formelsammlung Table */
+        .formula-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: var(--bg-dark);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .formula-table th, .formula-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--bg-light);
+        }
+        
+        .formula-table th {
+            background: var(--primary);
+            color: white;
+            font-weight: bold;
+        }
+        
+        .formula-table tr:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .formula-table code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: var(--accent);
+        }
+        
+        /* Calculator Styles */
+        .calculator-container {
+            background: var(--bg-dark);
+            border: 2px solid var(--purple);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .calculator-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+            color: var(--purple);
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .calc-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .calc-input {
+            padding: 10px 15px;
+            font-size: 1em;
+            background: var(--bg-card);
+            border: 2px solid var(--bg-light);
+            border-radius: 8px;
+            color: var(--text);
+            width: 120px;
+            text-align: center;
+        }
+        
+        .calc-input:focus {
+            outline: none;
+            border-color: var(--purple);
+        }
+        
+        .calc-label {
+            color: var(--text-muted);
+            min-width: 80px;
+        }
+        
+        .calc-btn {
+            padding: 10px 20px;
+            background: var(--purple);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .calc-btn:hover {
+            background: #9333ea;
+            transform: translateY(-2px);
+        }
+        
+        .calc-steps {
+            background: rgba(168, 85, 247, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.95em;
+            display: none;
+        }
+        
+        .calc-steps.show {
+            display: block;
+        }
+        
+        .calc-step {
+            margin-bottom: 8px;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        
+        .calc-result {
+            color: var(--secondary);
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(16, 185, 129, 0.2);
+            border-radius: 8px;
+        }
+        
+        /* Exercise Styles */
+        .exercise-container {
+            background: var(--bg-card);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 2px solid var(--bg-light);
+        }
+        
+        .exercise-container.correct {
+            border-color: var(--secondary);
+            background: rgba(16, 185, 129, 0.05);
+        }
+        
+        .exercise-container.incorrect {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.05);
+        }
+        
+        .exercise-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .exercise-number {
+            background: var(--primary);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+        
+        .exercise-points {
+            background: rgba(245, 158, 11, 0.2);
+            color: var(--accent);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+        
+        .exercise-question {
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+        
+        .answer-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .answer-input {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            background: var(--bg-dark);
+            border: 2px solid var(--bg-light);
+            border-radius: 10px;
+            color: var(--text);
+            width: 150px;
+            text-align: center;
+        }
+        
+        .answer-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .answer-input.correct {
+            border-color: var(--secondary);
+            background: rgba(16, 185, 129, 0.1);
+        }
+        
+        .answer-input.incorrect {
+            border-color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .answer-unit {
+            color: var(--text-muted);
+            font-weight: bold;
+        }
+        
+        .check-btn {
+            padding: 12px 25px;
+            background: var(--secondary);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .check-btn:hover {
+            background: #0ea572;
+        }
+        
+        .check-btn:disabled {
+            background: var(--bg-light);
+            cursor: not-allowed;
+        }
+        
+        .feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .feedback.show {
+            display: block;
+        }
+        
+        .feedback.correct {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--secondary);
+            color: var(--secondary);
+        }
+        
+        .feedback.incorrect {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: var(--danger);
+        }
+        
+        /* Simulation Styles */
+        .simulator {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .sim-header {
+            color: var(--secondary);
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        
+        .sim-content {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .input-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .input-label {
+            font-weight: bold;
+            width: 140px;
+            color: var(--text-muted);
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slider {
+            width: 150px;
+            height: 8px;
+            -webkit-appearance: none;
+            background: var(--bg-light);
+            border-radius: 4px;
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        
+        .slider-value {
+            min-width: 90px;
+            padding: 5px 10px;
+            background: var(--bg-dark);
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--accent);
+        }
+        
+        .output-display {
+            text-align: center;
+            padding: 20px;
+            background: var(--bg-dark);
+            border-radius: 10px;
+            min-width: 180px;
+        }
+        
+        .output-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+        
+        .output-label {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        
+        /* Results Summary */
+        .results-summary {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .results-summary h2 {
+            color: var(--primary);
+            margin-bottom: 30px;
+            font-size: 1.8em;
+        }
+        
+        .results-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 20px 30px;
+            background: var(--bg-dark);
+            border-radius: 15px;
+            min-width: 150px;
+        }
+        
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+        }
+        
+        .stat-value.excellent { color: var(--secondary); }
+        .stat-value.good { color: var(--accent); }
+        .stat-value.needs-work { color: var(--danger); }
+        
+        .stat-label {
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        
+        .errors-list {
+            background: var(--bg-dark);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .errors-list h3 {
+            color: var(--danger);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .error-item {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid var(--danger);
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 0 10px 10px 0;
+        }
+        
+        .error-question {
+            color: var(--text);
+            margin-bottom: 10px;
+        }
+        
+        .error-details {
+            display: flex;
+            gap: 20px;
+            font-size: 0.95em;
+        }
+        
+        .error-given {
+            color: var(--danger);
+        }
+        
+        .error-correct {
+            color: var(--secondary);
+        }
+        
+        /* Pixel Preview */
+        .pixel-preview {
+            display: grid;
+            gap: 2px;
+            background: var(--bg-light);
+            padding: 2px;
+            border-radius: 5px;
+            width: fit-content;
+            margin: 15px auto;
+        }
+        
+        .pixel {
+            width: 15px;
+            height: 15px;
+            background: var(--primary);
+            transition: all 0.3s;
+        }
+        
+        /* Navigation Buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        /* Responsive */
+        @media (max-width: 900px) {
+            .sidebar {
+                position: fixed;
+                width: 100%;
+                height: auto;
+                max-height: 50vh;
+                top: auto;
+                bottom: 0;
+                left: 0;
+                border-right: none;
+                border-top: 2px solid var(--bg-light);
+                z-index: 95;
+            }
+            .content {
+                margin-left: 0;
+                padding-bottom: 200px;
+            }
+            .fixed-calculator {
+                left: 0;
+                top: 70px;
+            }
+            .fixed-calculator .calc-row {
+                display: flex;
+                flex-wrap: wrap;
+                margin-left: 0;
+                margin-top: 10px;
+            }
+            .fixed-calculator .calc-input {
+                width: 200px !important;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .header { 
+                flex-wrap: wrap; 
+                gap: 10px;
+                padding: 10px 15px;
+            }
+            .content { 
+                padding: 15px;
+                padding-top: 130px;
+            }
+            .results-stats { 
+                flex-direction: column; 
+                align-items: center; 
+            }
+            .sim-content { 
+                flex-direction: column; 
+            }
+            .fixed-calculator {
+                padding: 10px 15px;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.5s ease; }
+        
+        @keyframes pointsUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-30px); opacity: 0; }
+        }
+        .points-animation {
+            position: fixed;
+            color: var(--secondary);
+            font-weight: bold;
+            font-size: 1.2em;
+            pointer-events: none;
+            animation: pointsUp 1s ease-out forwards;
+            z-index: 1000;
+        }
+        
+        /* Fixed Calculator */
+        .fixed-calculator {
+            position: fixed;
+            top: 70px;
+            left: 280px;
+            right: 0;
+            z-index: 80;
+            background: var(--bg-dark);
+            border-bottom: 2px solid var(--purple);
+            padding: 12px 25px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            display: none; /* Hidden by default, shown on exercise pages */
+        }
+        
+        .fixed-calculator.show {
+            display: block;
+        }
+        
+        .fixed-calculator .calculator-header {
+            margin-bottom: 0;
+            display: inline;
+        }
+        
+        .fixed-calculator .calc-row {
+            margin-bottom: 0;
+            display: inline-flex;
+            margin-left: 20px;
+        }
+        
+        .calc-toggle-btn {
+            background: var(--purple);
+            border: none;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin-left: 15px;
+        }
+        
+        .calc-toggle-btn:hover {
+            background: #9333ea;
+        }
+        
+        .fixed-calculator.collapsed .calc-content {
+            display: none;
+        }
+        
+        .fixed-calculator.collapsed {
+            padding: 8px 25px;
+        }
+        
+        .calc-expanded-area {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--bg-light);
+        }
+        
+        /* PDF & Email Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-pdf {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-pdf:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            transform: translateY(-2px);
+        }
+        
+        .btn-email {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-email:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-2px);
+        }
+        
+        /* Certificate Section */
+        .certificate-section {
+            background: rgba(16, 185, 129, 0.1);
+            border: 2px solid var(--secondary);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        
+        .certificate-section h3 {
+            color: var(--secondary);
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">
+            🖼️ Bildauflösung & Speicherbedarf
+            <span id="studentDisplay" style="display: none;" class="student-info">
+                👤 <span id="studentNameDisplay"></span>
+            </span>
+        </div>
+        <div id="pointsDisplay" class="points-display" style="display: none;">
+            ⭐ <span id="totalPointsDisplay">0</span> / <span id="maxPointsDisplay">44</span> Punkte
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-text">
+                <span id="progressText">0%</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <nav class="sidebar">
+            <h3>📚 Kapitel</h3>
+            <ul class="module-list" id="moduleList"></ul>
+        </nav>
+        
+        <!-- Fixed Calculator - shown on exercise pages -->
+        <div class="fixed-calculator" id="fixedCalc">
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <span class="calculator-header" style="color: var(--purple); font-weight: bold;">🧮 Rechner</span>
+                <div class="calc-row">
+                    <input type="text" class="calc-input" id="quickCalc" placeholder="z.B. 300*20/25" style="width: 280px;" onkeypress="if(event.key==='Enter')quickCalculate()">
+                    <button class="calc-btn" onclick="quickCalculate()">= Berechnen</button>
+                    <span id="quickResult" style="margin-left: 15px; font-size: 1.1em; color: var(--secondary); font-weight: bold;"></span>
+                </div>
+                <button class="calc-toggle-btn" onclick="toggleFixedCalc()">
+                    <span id="calcToggleText">▼ Details</span>
+                </button>
+            </div>
+            <div class="calc-content">
+                <div class="calc-expanded-area">
+                    <div class="calc-steps" id="quickSteps"></div>
+                </div>
+            </div>
+        </div>
+        
+        <main class="content" id="content"></main>
+    </div>
+
+    <script>
+        // ============ STATE ============
+        const state = {
+            studentName: '',
+            currentModule: 'welcome',
+            points: 0,
+            maxPoints: 44,
+            completedModules: new Set(),
+            answers: {},
+            errors: []
+        };
+        
+        // ============ MODULES ============
+        const modules = [
+            { id: 'welcome', title: 'Start', icon: '🏠', type: 'welcome' },
+            { id: 'formeln', title: 'Formelsammlung', icon: '📐', type: 'lesson' },
+            { id: 'simulation', title: 'Simulationen', icon: '🎮', type: 'simulation' },
+            { id: 'aufgabenA', title: 'A) Skalieren ohne Resampling', icon: '🔍', type: 'exercises', group: 'A' },
+            { id: 'aufgabenB', title: 'B) Umrechnung ppi ↔ px/cm', icon: '🔄', type: 'exercises', group: 'B' },
+            { id: 'aufgabenC', title: 'C) Speicherbedarf', icon: '💾', type: 'exercises', group: 'C' },
+            { id: 'zusammenfassung', title: 'Zusammenfassung', icon: '📊', type: 'results' }
+        ];
+        
+        // ============ EXERCISES DATA ============
+        const exercises = {
+            A: [
+                {
+                    id: 1,
+                    question: 'Ein 20 cm breites Bild mit einer Pixelauflösung von 300 ppi wird ohne Resampling auf 25 cm Breite skaliert. Welche neue Pixelauflösung (ppi) ergibt sich?',
+                    answer: 240,
+                    unit: 'ppi',
+                    tolerance: 1,
+                    points: 2,
+                    solution: 'Pixel = 20 cm × 300 ppi / 2,54 = 2362 px (konstant)\nNeue ppi = 2362 × 2,54 / 25 cm = 240 ppi\nOder: alte ppi × (alte Breite / neue Breite) = 300 × (20/25) = 240 ppi'
+                },
+                {
+                    id: 2,
+                    question: 'Ein 100 mm hohes Bild besitzt eine Pixelauflösung von 200 px/cm. Es wird ohne Pixelneuberechnung auf 125 mm Höhe skaliert. Welche Pixelauflösung in px/cm ergibt sich?',
+                    answer: 160,
+                    unit: 'px/cm',
+                    tolerance: 1,
+                    points: 2,
+                    solution: 'Pixel = 10 cm × 200 px/cm = 2000 px (konstant)\nNeue px/cm = 2000 px / 12,5 cm = 160 px/cm\nOder: alte px/cm × (alte Höhe / neue Höhe) = 200 × (100/125) = 160 px/cm'
+                },
+                {
+                    id: '3a',
+                    question: 'Ein Bild der Größe 100 mm × 150 mm hat eine Auflösung von 600 ppi. Ohne Resampling wird es auf 75 mm Breite skaliert. Welche neue Pixelauflösung ergibt sich?',
+                    answer: 800,
+                    unit: 'ppi',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Neue ppi = alte ppi × (alte Breite / neue Breite) = 600 × (100/75) = 800 ppi'
+                },
+                {
+                    id: '3b',
+                    question: 'Ein Bild der Größe 100 mm × 150 mm hat eine Auflösung von 600 ppi. Ohne Resampling wird es auf 300 mm Höhe skaliert. Welche neue Pixelauflösung ergibt sich?',
+                    answer: 300,
+                    unit: 'ppi',
+                    tolerance: 1,
+                    points: 2,
+                    solution: 'Neue ppi = alte ppi × (alte Höhe / neue Höhe) = 600 × (150/300) = 300 ppi'
+                },
+                {
+                    id: 4,
+                    question: 'Welche Pixelauflösung ergibt sich, wenn ein Bild mit 400 ppi ohne Resampling auf 200% skaliert wird?',
+                    answer: 200,
+                    unit: 'ppi',
+                    tolerance: 1,
+                    points: 2,
+                    solution: 'Neue ppi = alte ppi / Skalierungsfaktor = 400 / 2 = 200 ppi'
+                },
+                {
+                    id: '5a',
+                    question: 'Welche Pixelauflösung ergibt sich bei Auflösung 100 ppi und Skalierungsfaktor 50%?',
+                    answer: 200,
+                    unit: 'ppi',
+                    tolerance: 1,
+                    points: 1,
+                    solution: 'Neue ppi = alte ppi / Skalierungsfaktor = 100 / 0,5 = 200 ppi'
+                },
+                {
+                    id: '5b',
+                    question: 'Welche Pixelauflösung ergibt sich bei Auflösung 150 px/cm und Skalierungsfaktor 2?',
+                    answer: 75,
+                    unit: 'px/cm',
+                    tolerance: 1,
+                    points: 1,
+                    solution: 'Neue px/cm = alte px/cm / Skalierungsfaktor = 150 / 2 = 75 px/cm'
+                },
+                {
+                    id: '5c',
+                    question: 'Welche Pixelauflösung ergibt sich bei Auflösung 600 ppi und Skalierungsverhältnis 1:1,5?',
+                    answer: 400,
+                    unit: 'ppi',
+                    tolerance: 1,
+                    points: 1,
+                    solution: 'Skalierungsfaktor = 1,5\nNeue ppi = alte ppi / Skalierungsfaktor = 600 / 1,5 = 400 ppi'
+                },
+                {
+                    id: '5d',
+                    question: 'Welche Pixelauflösung ergibt sich bei Auflösung 200 px/cm und Skalierungsfaktor 300%?',
+                    answer: 66.67,
+                    unit: 'px/cm',
+                    tolerance: 1,
+                    points: 1,
+                    solution: 'Neue px/cm = alte px/cm / Skalierungsfaktor = 200 / 3 ≈ 66,67 px/cm'
+                },
+                {
+                    id: 6,
+                    question: 'Die Pixelfrequenz eines 30 cm breiten Bildes wird ohne Resampling von 240 ppi auf 300 ppi geändert. Welche neue Bildbreite (in cm) ergibt sich?',
+                    answer: 24,
+                    unit: 'cm',
+                    tolerance: 0.5,
+                    points: 2,
+                    solution: 'Pixel = 30 cm × 240 ppi / 2,54 = 2835 px (konstant)\nNeue Breite = 2835 × 2,54 / 300 = 24 cm\nOder: neue Breite = alte Breite × (alte ppi / neue ppi) = 30 × (240/300) = 24 cm'
+                },
+                {
+                    id: 7,
+                    question: 'Auf welche maximale Breite (in cm) kann ein 10 cm breites Bild mit 300 ppi skaliert werden, wenn die Pixelfrequenz nicht unter 150 ppi fallen darf?',
+                    answer: 20,
+                    unit: 'cm',
+                    tolerance: 0.5,
+                    points: 2,
+                    solution: 'Max. Breite = alte Breite × (alte ppi / min. ppi) = 10 × (300/150) = 20 cm'
+                },
+                {
+                    id: '8a',
+                    question: 'Ein Bild (200 mm × 300 mm, 100 px/cm) wird ohne Resampling auf 50 px/cm geändert. Welche neue Breite (in mm) ergibt sich?',
+                    answer: 400,
+                    unit: 'mm',
+                    tolerance: 5,
+                    points: 2,
+                    solution: 'Neue Breite = alte Breite × (alte px/cm / neue px/cm) = 200 × (100/50) = 400 mm'
+                },
+                {
+                    id: '8b',
+                    question: 'Ein Bild (200 mm × 300 mm, 100 px/cm) wird ohne Resampling auf 200 px/cm geändert. Welche neue Höhe (in mm) ergibt sich?',
+                    answer: 150,
+                    unit: 'mm',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Neue Höhe = alte Höhe × (alte px/cm / neue px/cm) = 300 × (100/200) = 150 mm'
+                }
+            ],
+            B: [
+                {
+                    id: 9,
+                    question: 'Ein 160 mm breites Bild hat eine Auflösung von 100 px/cm. Welche Breite (in mm) ergibt sich, wenn die Auflösung ohne Resampling auf 200 px/cm geändert wird?',
+                    answer: 80,
+                    unit: 'mm',
+                    tolerance: 1,
+                    points: 2,
+                    solution: 'Neue Breite = alte Breite × (alte px/cm / neue px/cm) = 160 × (100/200) = 80 mm'
+                },
+                {
+                    id: 10,
+                    question: 'Die Auflösung eines 80 mm hohen Bildes wird ohne Pixelneuberechnung von 300 ppi auf 150 ppi geändert. Berechnen Sie die neue Bildhöhe (in mm).',
+                    answer: 160,
+                    unit: 'mm',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Neue Höhe = alte Höhe × (alte ppi / neue ppi) = 80 × (300/150) = 160 mm'
+                }
+            ],
+            C: [
+                {
+                    id: 11,
+                    question: 'Ein Graustufenbild (8 Bit) ist 800 × 500 Pixel groß. Berechnen Sie die Bilddatenmenge in Kilobyte (kB = 1000 Byte).',
+                    answer: 400,
+                    unit: 'kB',
+                    tolerance: 5,
+                    points: 2,
+                    solution: 'Datenmenge = 800 × 500 × 8 Bit = 3.200.000 Bit\n= 3.200.000 / 8 = 400.000 Byte\n= 400.000 / 1000 = 400 kB'
+                },
+                {
+                    id: '12a',
+                    question: 'Welche Datenmenge (in kB) hat ein RGB-Bild, 600 × 400 Pixel, Datentiefe 24 Bit?',
+                    answer: 720,
+                    unit: 'kB',
+                    tolerance: 10,
+                    points: 1,
+                    solution: 'Datenmenge = 600 × 400 × 24 Bit = 5.760.000 Bit\n= 5.760.000 / 8 = 720.000 Byte\n= 720.000 / 1000 = 720 kB'
+                },
+                {
+                    id: '12b',
+                    question: 'Welche Datenmenge (in KiB) hat ein RGB-Bild, 600 × 400 Pixel, Datentiefe 24 Bit?',
+                    answer: 703.125,
+                    unit: 'KiB',
+                    tolerance: 5,
+                    points: 1,
+                    solution: 'Datenmenge = 720.000 Byte / 1024 ≈ 703,125 KiB'
+                },
+                {
+                    id: 13,
+                    question: 'Ein 500 × 500 Pixel großes Bild (256 indizierte Farben = 8 Bit) hat einen 10 KiB großen Header. Wie groß ist die gesamte Datei in KiB?',
+                    answer: 254.41,
+                    unit: 'KiB',
+                    tolerance: 3,
+                    points: 2,
+                    solution: 'Bilddaten = 500 × 500 × 8 Bit = 2.000.000 Bit\n= 250.000 Byte = 250.000 / 1024 ≈ 244,14 KiB\nGesamt = 244,14 + 10 ≈ 254,14 KiB'
+                },
+                {
+                    id: 14,
+                    question: 'Ein RGB-Bild (24 Bit) ist 2000 × 1500 Pixel groß. Geben Sie die Datenmenge in Megabyte (MB = 10⁶ Byte) an.',
+                    answer: 9,
+                    unit: 'MB',
+                    tolerance: 0.5,
+                    points: 2,
+                    solution: 'Datenmenge = 2000 × 1500 × 24 Bit = 72.000.000 Bit\n= 9.000.000 Byte = 9 MB'
+                },
+                {
+                    id: '15a',
+                    question: 'Ein Digitalkamerabild (3000 × 2000 Pixel, 8 Bit pro RGB-Kanal = 24 Bit gesamt) wird unkomprimiert gespeichert. Berechnen Sie die Datenmenge in MB.',
+                    answer: 18,
+                    unit: 'MB',
+                    tolerance: 0.5,
+                    points: 1,
+                    solution: 'Datenmenge = 3000 × 2000 × 24 Bit = 144.000.000 Bit\n= 18.000.000 Byte = 18 MB'
+                },
+                {
+                    id: '15b',
+                    question: 'Ein Digitalkamerabild (3000 × 2000 Pixel, 8 Bit pro RGB-Kanal = 24 Bit gesamt) wird unkomprimiert gespeichert. Berechnen Sie die Datenmenge in MiB.',
+                    answer: 17.166,
+                    unit: 'MiB',
+                    tolerance: 0.2,
+                    points: 1,
+                    solution: 'Datenmenge = 18.000.000 Byte / 1.048.576 ≈ 17,17 MiB'
+                },
+                {
+                    id: 16,
+                    question: 'Welche Bilddatenmenge (in MiB) ergibt sich bei einer Bildgröße von 2000 × 3000 Pixel und einer Datentiefe von 48 Bit?',
+                    answer: 34.33,
+                    unit: 'MiB',
+                    tolerance: 0.5,
+                    points: 2,
+                    solution: 'Datenmenge = 2000 × 3000 × 48 Bit = 288.000.000 Bit\n= 36.000.000 Byte = 36.000.000 / 1.048.576 ≈ 34,33 MiB'
+                },
+                {
+                    id: 17,
+                    question: 'Welche Größe in MiB hat eine TIFF-Datei eines CMYK-Bildes (2000 × 3000 Pixel, 32 Bit), wenn Header + ICC-Profil 1 MiB groß sind?',
+                    answer: 23.89,
+                    unit: 'MiB',
+                    tolerance: 0.5,
+                    points: 2,
+                    solution: 'Bilddaten = 2000 × 3000 × 32 Bit = 192.000.000 Bit\n= 24.000.000 Byte ≈ 22,89 MiB\nGesamt = 22,89 + 1 = 23,89 MiB'
+                },
+                {
+                    id: '18a',
+                    question: 'Ein Strichbild (1 Bit) ist 800 × 600 Pixel groß. Berechnen Sie die Bilddatenmenge in Kilobyte (kB).',
+                    answer: 60,
+                    unit: 'kB',
+                    tolerance: 2,
+                    points: 1,
+                    solution: 'Datenmenge = 800 × 600 × 1 Bit = 480.000 Bit\n= 60.000 Byte = 60 kB'
+                },
+                {
+                    id: '18b',
+                    question: 'Ein Strichbild (1 Bit) ist 800 × 600 Pixel groß. Berechnen Sie die Bilddatenmenge in Kibibyte (KiB).',
+                    answer: 58.59,
+                    unit: 'KiB',
+                    tolerance: 1,
+                    points: 1,
+                    solution: 'Datenmenge = 60.000 Byte / 1024 ≈ 58,59 KiB'
+                },
+                {
+                    id: 19,
+                    question: 'Welche Bilddatenmenge (in MiB) hat ein 8000 × 6000 Pixel großes Strichbild (1 Bit)?',
+                    answer: 5.72,
+                    unit: 'MiB',
+                    tolerance: 0.1,
+                    points: 2,
+                    solution: 'Datenmenge = 8000 × 6000 × 1 Bit = 48.000.000 Bit\n= 6.000.000 Byte = 6.000.000 / 1.048.576 ≈ 5,72 MiB'
+                },
+                {
+                    id: '20a',
+                    question: 'Ein 4 inch × 6 inch großes Graustufenbild hat 200 ppi. Berechnen Sie die Breite in Pixeln.',
+                    answer: 800,
+                    unit: 'px',
+                    tolerance: 5,
+                    points: 1,
+                    solution: 'Breite = 4 inch × 200 ppi = 800 Pixel'
+                },
+                {
+                    id: '20b',
+                    question: 'Ein 4 inch × 6 inch großes Graustufenbild hat 200 ppi. Berechnen Sie die Höhe in Pixeln.',
+                    answer: 1200,
+                    unit: 'px',
+                    tolerance: 5,
+                    points: 1,
+                    solution: 'Höhe = 6 inch × 200 ppi = 1200 Pixel'
+                },
+                {
+                    id: '20c',
+                    question: 'Ein 4 inch × 6 inch großes Graustufenbild (200 ppi, 16 Bit). Berechnen Sie die Datenmenge in MB.',
+                    answer: 1.92,
+                    unit: 'MB',
+                    tolerance: 0.1,
+                    points: 1,
+                    solution: 'Pixel = 800 × 1200 = 960.000 Pixel\nDatenmenge = 960.000 × 16 Bit = 15.360.000 Bit\n= 1.920.000 Byte = 1,92 MB'
+                },
+                {
+                    id: 21,
+                    question: 'Berechnen Sie die Dateigröße in KiB: Auflösung 100 ppi, Datentiefe 24 Bit, Bildgröße 5 inch × 5 inch, Dateikopf 25 KiB.',
+                    answer: 757.32,
+                    unit: 'KiB',
+                    tolerance: 10,
+                    points: 2,
+                    solution: 'Pixel = 500 × 500 = 250.000 Pixel\nBilddaten = 250.000 × 24 Bit = 6.000.000 Bit\n= 750.000 Byte ≈ 732,42 KiB\nGesamt = 732,42 + 25 ≈ 757,42 KiB'
+                },
+                {
+                    id: '22a',
+                    question: 'Ein CMYK-Bild (20 cm × 10 cm, 100 px/cm, 32 Bit). Geben Sie die Datenmenge in MB an.',
+                    answer: 8,
+                    unit: 'MB',
+                    tolerance: 0.2,
+                    points: 1,
+                    solution: 'Pixel = 2000 × 1000 = 2.000.000 Pixel\nDatenmenge = 2.000.000 × 32 Bit = 64.000.000 Bit\n= 8.000.000 Byte = 8 MB'
+                },
+                {
+                    id: '22b',
+                    question: 'Ein CMYK-Bild (20 cm × 10 cm, 100 px/cm, 32 Bit). Geben Sie die Datenmenge in MiB an.',
+                    answer: 7.63,
+                    unit: 'MiB',
+                    tolerance: 0.1,
+                    points: 1,
+                    solution: 'Datenmenge = 8.000.000 Byte / 1.048.576 ≈ 7,63 MiB'
+                }
+            ]
+        };
+        
+        // ============ RENDER FUNCTIONS ============
+        function renderSidebar() {
+            const list = document.getElementById('moduleList');
+            list.innerHTML = modules.map(m => {
+                const isCompleted = state.completedModules.has(m.id);
+                const isActive = state.currentModule === m.id;
+                return `
+                    <li class="module-item">
+                        <button class="module-btn ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}" 
+                                onclick="navigateTo('${m.id}')">
+                            <span class="module-icon">${m.icon}</span>
+                            ${m.title}
+                        </button>
+                    </li>
+                `;
+            }).join('');
+        }
+        
+        function renderProgress() {
+            const total = state.maxPoints;
+            const current = state.points;
+            const percent = Math.round((current / total) * 100);
+            
+            document.getElementById('progressFill').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = `${percent}%`;
+            document.getElementById('totalPointsDisplay').textContent = current;
+        }
+        
+        function renderContent() {
+            const module = modules.find(m => m.id === state.currentModule);
+            const content = document.getElementById('content');
+            
+            if (!module) return;
+            
+            // Show/hide fixed calculator based on module type
+            const showCalc = module.type === 'exercises';
+            showFixedCalc(showCalc);
+            
+            switch (module.type) {
+                case 'welcome':
+                    content.innerHTML = renderWelcome();
+                    break;
+                case 'lesson':
+                    content.innerHTML = renderFormeln();
+                    break;
+                case 'simulation':
+                    content.innerHTML = renderSimulation();
+                    setTimeout(initSimulators, 100);
+                    break;
+                case 'exercises':
+                    content.innerHTML = renderExercises(module.group);
+                    break;
+                case 'results':
+                    content.innerHTML = renderResults();
+                    break;
+            }
+        }
+        
+        function renderWelcome() {
+            if (!state.studentName) {
+                return `
+                    <div class="name-input-container fade-in">
+                        <h2>👤 Willkommen!</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">Bitte gib deinen Namen ein:</p>
+                        <input type="text" class="name-input" id="nameInput" placeholder="Dein Name" 
+                               onkeypress="if(event.key==='Enter')startCourse()">
+                        <br><br>
+                        <button class="start-btn" onclick="startCourse()">Kurs starten 🚀</button>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="welcome-hero fade-in">
+                    <h1>🖼️ Bildauflösung & Speicherbedarf</h1>
+                    <p>Lerne die wichtigsten Berechnungen rund um digitale Bilder: Pixelauflösung, Skalierung ohne Resampling und Speicherbedarf.</p>
+                    <button class="start-btn" onclick="navigateTo('formeln')">Zur Formelsammlung 📐</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="section" style="text-align: center;">
+                        <h2>📐 Formelsammlung</h2>
+                        <p>Alle wichtigen Formeln und Umrechnungen auf einen Blick.</p>
+                    </div>
+                    <div class="section" style="text-align: center;">
+                        <h2>🎮 Interaktive Simulationen</h2>
+                        <p>Verstehe die Zusammenhänge durch praktische Experimente.</p>
+                    </div>
+                    <div class="section" style="text-align: center;">
+                        <h2>📝 22 Übungsaufgaben</h2>
+                        <p>Teste dein Wissen mit automatischer Auswertung.</p>
+                    </div>
+                    <div class="section" style="text-align: center;">
+                        <h2>🧮 Integrierter Rechner</h2>
+                        <p>Taschenrechner mit dokumentierten Rechenschritten.</p>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderFormeln() {
+            return `
+                <div class="fade-in">
+                    <h1 style="color: var(--primary); margin-bottom: 30px;">📐 Formelsammlung</h1>
+                    
+                    <div class="section">
+                        <h2>🔢 Grundlegende Einheiten</h2>
+                        <table class="formula-table">
+                            <tr>
+                                <th>Einheit</th>
+                                <th>Bedeutung</th>
+                                <th>Umrechnung</th>
+                            </tr>
+                            <tr>
+                                <td><code>ppi</code></td>
+                                <td>Pixels per Inch (Pixel pro Zoll)</td>
+                                <td>1 inch = 2,54 cm</td>
+                            </tr>
+                            <tr>
+                                <td><code>px/cm</code></td>
+                                <td>Pixel pro Zentimeter</td>
+                                <td>px/cm × 2,54 = ppi</td>
+                            </tr>
+                            <tr>
+                                <td><code>kB</code></td>
+                                <td>Kilobyte (dezimal)</td>
+                                <td>1 kB = 1.000 Byte</td>
+                            </tr>
+                            <tr>
+                                <td><code>KiB</code></td>
+                                <td>Kibibyte (binär)</td>
+                                <td>1 KiB = 1.024 Byte</td>
+                            </tr>
+                            <tr>
+                                <td><code>MB</code></td>
+                                <td>Megabyte (dezimal)</td>
+                                <td>1 MB = 1.000.000 Byte</td>
+                            </tr>
+                            <tr>
+                                <td><code>MiB</code></td>
+                                <td>Mebibyte (binär)</td>
+                                <td>1 MiB = 1.048.576 Byte</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>🔍 Skalieren ohne Resampling</h2>
+                        <p>Beim Skalieren <strong>ohne Resampling</strong> bleibt die <strong>Pixelanzahl konstant</strong>. Nur die physische Größe und die Auflösung ändern sich.</p>
+                        
+                        <div class="theory-box">
+                            <h4>Grundprinzip</h4>
+                            <p><strong>Pixel = konstant</strong> → Wenn die Größe steigt, sinkt die Auflösung (und umgekehrt)</p>
+                        </div>
+                        
+                        <div class="formula-box">
+                            Neue Auflösung = Alte Auflösung × (Alte Größe / Neue Größe)
+                        </div>
+                        
+                        <div class="formula-box">
+                            Neue Auflösung = Alte Auflösung / Skalierungsfaktor
+                        </div>
+                        
+                        <div class="formula-box">
+                            Neue Größe = Alte Größe × (Alte Auflösung / Neue Auflösung)
+                        </div>
+                        
+                        <div class="tip-box">
+                            <strong>💡 Tipp:</strong> Bei Skalierung auf 200% wird das Bild doppelt so groß → Auflösung halbiert sich!
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>🔄 Umrechnung ppi ↔ px/cm</h2>
+                        
+                        <div class="formula-box">
+                            ppi = px/cm × 2,54
+                        </div>
+                        
+                        <div class="formula-box">
+                            px/cm = ppi / 2,54
+                        </div>
+                        
+                        <table class="formula-table">
+                            <tr>
+                                <th>px/cm</th>
+                                <th>ppi</th>
+                            </tr>
+                            <tr><td>100</td><td>254</td></tr>
+                            <tr><td>118,11</td><td>≈ 300</td></tr>
+                            <tr><td>150</td><td>381</td></tr>
+                            <tr><td>200</td><td>508</td></tr>
+                        </table>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>💾 Speicherbedarf / Bilddatenmenge</h2>
+                        
+                        <div class="formula-box">
+                            Datenmenge (Bit) = Breite (px) × Höhe (px) × Farbtiefe (Bit)
+                        </div>
+                        
+                        <div class="formula-box">
+                            Datenmenge (Byte) = Datenmenge (Bit) / 8
+                        </div>
+                        
+                        <table class="formula-table">
+                            <tr>
+                                <th>Bildtyp</th>
+                                <th>Farbtiefe</th>
+                                <th>Kanäle</th>
+                            </tr>
+                            <tr><td>Strichbild (s/w)</td><td>1 Bit</td><td>1</td></tr>
+                            <tr><td>Graustufen</td><td>8 Bit oder 16 Bit</td><td>1</td></tr>
+                            <tr><td>Indiziert (256 Farben)</td><td>8 Bit</td><td>1 + Palette</td></tr>
+                            <tr><td>RGB</td><td>24 Bit (3×8) oder 48 Bit (3×16)</td><td>3</td></tr>
+                            <tr><td>CMYK</td><td>32 Bit (4×8) oder 64 Bit (4×16)</td><td>4</td></tr>
+                        </table>
+                        
+                        <div class="warning-box">
+                            <strong>⚠️ Wichtig:</strong> Bei Dateigrößen müssen Header, ICC-Profile etc. hinzugerechnet werden!
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>📏 Pixelanzahl berechnen</h2>
+                        
+                        <div class="formula-box">
+                            Pixel = Größe (inch) × Auflösung (ppi)
+                        </div>
+                        
+                        <div class="formula-box">
+                            Pixel = Größe (cm) × Auflösung (px/cm)
+                        </div>
+                        
+                        <div class="formula-box">
+                            Pixel = Größe (cm) × Auflösung (ppi) / 2,54
+                        </div>
+                    </div>
+                    
+                    <div class="nav-buttons">
+                        <button class="btn btn-primary" onclick="navigateTo('welcome')">← Zurück</button>
+                        <button class="btn btn-success" onclick="navigateTo('simulation')">Zu den Simulationen →</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderSimulation() {
+            return `
+                <div class="fade-in">
+                    <h1 style="color: var(--primary); margin-bottom: 30px;">🎮 Interaktive Simulationen</h1>
+                    
+                    <div class="section">
+                        <h2>🔍 Simulation 1: Skalieren ohne Resampling</h2>
+                        <p>Verändere die Bildgröße und beobachte, wie sich die Auflösung ändert (Pixelanzahl bleibt konstant).</p>
+                        
+                        <div class="simulator">
+                            <div class="sim-header">🔧 Parameter einstellen</div>
+                            <div class="sim-content">
+                                <div class="input-controls">
+                                    <div class="input-row">
+                                        <span class="input-label">Urspr. Breite:</span>
+                                        <div class="slider-container">
+                                            <input type="range" class="slider" id="sim1Width" min="5" max="50" value="20">
+                                            <span class="slider-value" id="sim1WidthVal">20 cm</span>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Urspr. ppi:</span>
+                                        <div class="slider-container">
+                                            <input type="range" class="slider" id="sim1Ppi" min="72" max="600" value="300" step="1">
+                                            <span class="slider-value" id="sim1PpiVal">300 ppi</span>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Neue Breite:</span>
+                                        <div class="slider-container">
+                                            <input type="range" class="slider" id="sim1NewWidth" min="5" max="50" value="25">
+                                            <span class="slider-value" id="sim1NewWidthVal">25 cm</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim1Pixels">2362</div>
+                                        <div class="output-label">Pixel (konstant)</div>
+                                    </div>
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim1NewPpi">240</div>
+                                        <div class="output-label">Neue ppi</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>💾 Simulation 2: Speicherbedarf berechnen</h2>
+                        <p>Verändere die Bildparameter und beobachte, wie sich der Speicherbedarf ändert.</p>
+                        
+                        <div class="simulator">
+                            <div class="sim-header">🔧 Bildparameter</div>
+                            <div class="sim-content">
+                                <div class="input-controls">
+                                    <div class="input-row">
+                                        <span class="input-label">Breite (px):</span>
+                                        <div class="slider-container">
+                                            <input type="range" class="slider" id="sim2Width" min="100" max="4000" value="1920" step="10">
+                                            <span class="slider-value" id="sim2WidthVal">1920 px</span>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Höhe (px):</span>
+                                        <div class="slider-container">
+                                            <input type="range" class="slider" id="sim2Height" min="100" max="4000" value="1080" step="10">
+                                            <span class="slider-value" id="sim2HeightVal">1080 px</span>
+                                        </div>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Farbtiefe:</span>
+                                        <select id="sim2Depth" style="padding: 8px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text);">
+                                            <option value="1">1 Bit (Strich)</option>
+                                            <option value="8">8 Bit (Graustufen)</option>
+                                            <option value="24" selected>24 Bit (RGB)</option>
+                                            <option value="32">32 Bit (CMYK)</option>
+                                            <option value="48">48 Bit (RGB 16)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim2Megapixel">2.07</div>
+                                        <div class="output-label">Megapixel</div>
+                                    </div>
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim2MB">5.93</div>
+                                        <div class="output-label">MB</div>
+                                    </div>
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim2MiB">5.66</div>
+                                        <div class="output-label">MiB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>🧮 Online-Taschenrechner</h2>
+                        <p>Berechne Werte mit dokumentierten Rechenschritten.</p>
+                        
+                        <div class="calculator-container">
+                            <div class="calculator-header">🧮 Universalrechner</div>
+                            
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: var(--text-muted);">Berechnungstyp:</label>
+                                <select id="calcType" onchange="updateCalculator()" style="padding: 10px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text); margin-left: 10px;">
+                                    <option value="scaling">Skalierung ohne Resampling</option>
+                                    <option value="storage">Speicherbedarf</option>
+                                    <option value="pixels">Pixelanzahl</option>
+                                    <option value="convert">Einheiten umrechnen</option>
+                                </select>
+                            </div>
+                            
+                            <div id="calcInputs"></div>
+                            
+                            <button class="calc-btn" onclick="calculate()">Berechnen 🔢</button>
+                            
+                            <div class="calc-steps" id="calcSteps"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="nav-buttons">
+                        <button class="btn btn-primary" onclick="navigateTo('formeln')">← Formelsammlung</button>
+                        <button class="btn btn-success" onclick="navigateTo('aufgabenA')">Zu den Aufgaben →</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderExercises(group) {
+            const groupExercises = exercises[group];
+            const groupNames = { A: 'Skalieren ohne Resampling', B: 'Umrechnung ppi ↔ px/cm', C: 'Speicherbedarf' };
+            
+            let totalPoints = groupExercises.reduce((sum, ex) => sum + ex.points, 0);
+            
+            return `
+                <div class="fade-in">
+                    <h1 style="color: var(--primary); margin-bottom: 10px;">📝 Teil ${group}: ${groupNames[group]}</h1>
+                    <p style="color: var(--text-muted); margin-bottom: 30px;">
+                        ${groupExercises.length} Aufgaben • ${totalPoints} Punkte möglich
+                    </p>
+                    
+                    ${groupExercises.map(ex => renderExercise(ex, group)).join('')}
+                    
+                    <div class="nav-buttons">
+                        ${group === 'A' ? `<button class="btn btn-primary" onclick="navigateTo('simulation')">← Simulationen</button>` : ''}
+                        ${group === 'B' ? `<button class="btn btn-primary" onclick="navigateTo('aufgabenA')">← Teil A</button>` : ''}
+                        ${group === 'C' ? `<button class="btn btn-primary" onclick="navigateTo('aufgabenB')">← Teil B</button>` : ''}
+                        
+                        ${group === 'A' ? `<button class="btn btn-success" onclick="navigateTo('aufgabenB')">Teil B →</button>` : ''}
+                        ${group === 'B' ? `<button class="btn btn-success" onclick="navigateTo('aufgabenC')">Teil C →</button>` : ''}
+                        ${group === 'C' ? `<button class="btn btn-success" onclick="navigateTo('zusammenfassung')">Zur Auswertung →</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderExercise(ex, group) {
+            const answerId = `${group}_${ex.id}`;
+            const existingAnswer = state.answers[answerId];
+            const isAnswered = existingAnswer !== undefined;
+            const isCorrect = isAnswered && existingAnswer.correct;
+            
+            return `
+                <div class="exercise-container ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" id="ex_${answerId}">
+                    <div class="exercise-header">
+                        <span class="exercise-number">Aufgabe ${ex.id}</span>
+                        <span class="exercise-points">${ex.points} ${ex.points === 1 ? 'Punkt' : 'Punkte'}</span>
+                    </div>
+                    <div class="exercise-question">${ex.question}</div>
+                    
+                    <div class="answer-row">
+                        <input type="number" step="any" class="answer-input ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" 
+                               id="input_${answerId}" 
+                               placeholder="Antwort"
+                               value="${existingAnswer ? existingAnswer.given : ''}"
+                               ${isAnswered ? 'disabled' : ''}>
+                        <span class="answer-unit">${ex.unit}</span>
+                        <button class="check-btn" onclick="checkAnswer('${group}', '${ex.id}')" 
+                                ${isAnswered ? 'disabled' : ''}>
+                            ${isAnswered ? (isCorrect ? '✓ Richtig' : '✗ Falsch') : 'Prüfen'}
+                        </button>
+                    </div>
+                    
+                    <div class="feedback ${isAnswered ? 'show' : ''} ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" id="feedback_${answerId}">
+                        ${isAnswered ? (isCorrect ? 
+                            `<strong>✓ Richtig!</strong> +${ex.points} Punkte` : 
+                            `<strong>✗ Leider falsch.</strong> Deine Antwort: ${existingAnswer.given} ${ex.unit}<br>Richtige Antwort: ${ex.answer} ${ex.unit} (Toleranz: ±${ex.tolerance})<br><br><strong>Lösung:</strong><br><pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">${ex.solution}</pre>`
+                        ) : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderResults() {
+            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C];
+            const totalExercises = allExercises.length;
+            const answeredCount = Object.keys(state.answers).length;
+            const correctCount = Object.values(state.answers).filter(a => a.correct).length;
+            const percentage = totalExercises > 0 ? Math.round((correctCount / totalExercises) * 100) : 0;
+            
+            const scoreClass = percentage >= 80 ? 'excellent' : percentage >= 50 ? 'good' : 'needs-work';
+            const scoreEmoji = percentage >= 80 ? '🏆' : percentage >= 50 ? '👍' : '📚';
+            
+            // Collect errors
+            const errorsList = [];
+            for (const [key, value] of Object.entries(state.answers)) {
+                if (!value.correct) {
+                    const [group, id] = key.split('_');
+                    const ex = exercises[group].find(e => String(e.id) === id);
+                    if (ex) {
+                        errorsList.push({
+                            id: ex.id,
+                            question: ex.question,
+                            given: value.given,
+                            correct: ex.answer,
+                            unit: ex.unit,
+                            solution: ex.solution
+                        });
+                    }
+                }
+            }
+            
+            return `
+                <div class="fade-in">
+                    <div class="results-summary">
+                        <h2>${scoreEmoji} Deine Ergebnisse</h2>
+                        
+                        <div class="results-stats">
+                            <div class="stat-box">
+                                <div class="stat-value ${scoreClass}">${percentage}%</div>
+                                <div class="stat-label">Gesamtergebnis</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" style="color: var(--secondary);">${state.points}</div>
+                                <div class="stat-label">von ${state.maxPoints} Punkten</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" style="color: var(--primary);">${correctCount}/${totalExercises}</div>
+                                <div class="stat-label">Aufgaben richtig</div>
+                            </div>
+                        </div>
+                        
+                        <p style="color: var(--text-muted); font-size: 1.1em;">
+                            ${percentage >= 80 ? 'Hervorragend! Du hast das Thema sehr gut verstanden!' :
+                              percentage >= 50 ? 'Gut gemacht! Mit etwas Übung wird es noch besser.' :
+                              'Schau dir die Formelsammlung nochmal an und übe weiter!'}
+                        </p>
+                        
+                        ${answeredCount < totalExercises ? `
+                            <div class="warning-box" style="margin-top: 20px;">
+                                <strong>⚠️ Hinweis:</strong> Du hast erst ${answeredCount} von ${totalExercises} Aufgaben beantwortet.
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    ${errorsList.length > 0 ? `
+                        <div class="errors-list">
+                            <h3>❌ Aufgaben mit Rechenfehlern (${errorsList.length})</h3>
+                            ${errorsList.map(err => `
+                                <div class="error-item">
+                                    <div class="error-question"><strong>Aufgabe ${err.id}:</strong> ${err.question}</div>
+                                    <div class="error-details">
+                                        <span class="error-given">Deine Antwort: ${err.given} ${err.unit}</span>
+                                        <span class="error-correct">Richtig: ${err.correct} ${err.unit}</span>
+                                    </div>
+                                    <details style="margin-top: 10px;">
+                                        <summary style="cursor: pointer; color: var(--primary);">Lösungsweg anzeigen</summary>
+                                        <pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 5px; margin-top: 10px; font-size: 0.9em;">${err.solution}</pre>
+                                    </details>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div class="section" style="text-align: center; border-color: var(--secondary);">
+                            <h2 style="color: var(--secondary);">🎉 Perfekt!</h2>
+                            <p>Du hast alle Aufgaben richtig gelöst!</p>
+                        </div>
+                    `}
+                    
+                    <!-- PDF & E-Mail Sektion -->
+                    <div class="certificate-section">
+                        <h3>📄 Ergebnisse speichern & versenden</h3>
+                        <p style="color: var(--text-muted); margin-bottom: 20px;">
+                            Speichere deine Ergebnisse als PDF oder sende sie per E-Mail an deinen Lehrer.
+                        </p>
+                        <div class="action-buttons">
+                            <button class="btn btn-pdf" onclick="generatePDF()">
+                                📥 Als PDF speichern
+                            </button>
+                            <button class="btn btn-email" onclick="sendEmail()">
+                                📧 Per E-Mail senden
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="nav-buttons">
+                        <button class="btn btn-primary" onclick="navigateTo('aufgabenA')">← Zurück zu den Aufgaben</button>
+                        <button class="btn btn-success" onclick="resetCourse()">🔄 Kurs neu starten</button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ============ INTERACTION FUNCTIONS ============
+        function startCourse() {
+            const nameInput = document.getElementById('nameInput');
+            if (nameInput && nameInput.value.trim()) {
+                state.studentName = nameInput.value.trim();
+                document.getElementById('studentDisplay').style.display = 'flex';
+                document.getElementById('studentNameDisplay').textContent = state.studentName;
+                document.getElementById('pointsDisplay').style.display = 'block';
+                render();
+            }
+        }
+        
+        function navigateTo(moduleId) {
+            state.currentModule = moduleId;
+            render();
+            window.scrollTo(0, 0);
+        }
+        
+        function checkAnswer(group, id) {
+            const answerId = `${group}_${id}`;
+            const input = document.getElementById(`input_${answerId}`);
+            const exercise = exercises[group].find(e => String(e.id) === String(id));
+            
+            if (!input || !exercise) return;
+            
+            const givenValue = parseFloat(input.value.replace(',', '.'));
+            if (isNaN(givenValue)) {
+                alert('Bitte gib eine gültige Zahl ein!');
+                return;
+            }
+            
+            const correctValue = exercise.answer;
+            const tolerance = exercise.tolerance;
+            const isCorrect = Math.abs(givenValue - correctValue) <= tolerance;
+            
+            state.answers[answerId] = {
+                given: givenValue,
+                correct: isCorrect
+            };
+            
+            if (isCorrect) {
+                state.points += exercise.points;
+                showPointsAnimation(exercise.points);
+            } else {
+                state.errors.push({
+                    id: exercise.id,
+                    question: exercise.question,
+                    given: givenValue,
+                    correct: correctValue,
+                    unit: exercise.unit
+                });
+            }
+            
+            // Update UI
+            input.classList.add(isCorrect ? 'correct' : 'incorrect');
+            input.disabled = true;
+            
+            const container = document.getElementById(`ex_${answerId}`);
+            container.classList.add(isCorrect ? 'correct' : 'incorrect');
+            
+            const feedback = document.getElementById(`feedback_${answerId}`);
+            feedback.classList.add('show', isCorrect ? 'correct' : 'incorrect');
+            feedback.innerHTML = isCorrect ? 
+                `<strong>✓ Richtig!</strong> +${exercise.points} Punkte` :
+                `<strong>✗ Leider falsch.</strong> Deine Antwort: ${givenValue} ${exercise.unit}<br>Richtige Antwort: ${correctValue} ${exercise.unit} (Toleranz: ±${tolerance})<br><br><strong>Lösung:</strong><br><pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">${exercise.solution}</pre>`;
+            
+            const btn = container.querySelector('.check-btn');
+            btn.disabled = true;
+            btn.textContent = isCorrect ? '✓ Richtig' : '✗ Falsch';
+            
+            renderProgress();
+        }
+        
+        function showPointsAnimation(points) {
+            const anim = document.createElement('div');
+            anim.className = 'points-animation';
+            anim.textContent = `+${points}`;
+            anim.style.left = (Math.random() * 200 + 100) + 'px';
+            anim.style.top = '100px';
+            document.body.appendChild(anim);
+            setTimeout(() => anim.remove(), 1000);
+        }
+        
+        function resetCourse() {
+            if (confirm('Möchtest du wirklich alle Fortschritte zurücksetzen?')) {
+                state.points = 0;
+                state.answers = {};
+                state.errors = [];
+                state.completedModules.clear();
+                navigateTo('aufgabenA');
+            }
+        }
+        
+        // ============ CALCULATOR FUNCTIONS ============
+        function quickCalculate() {
+            const input = document.getElementById('quickCalc');
+            const resultSpan = document.getElementById('quickResult');
+            const stepsDiv = document.getElementById('quickSteps');
+            
+            try {
+                // Safe evaluation
+                const expression = input.value.replace(/,/g, '.');
+                const sanitized = expression.replace(/[^0-9+\-*/().]/g, '');
+                const result = Function('"use strict"; return (' + sanitized + ')')();
+                
+                resultSpan.textContent = `= ${result.toFixed(4).replace(/\.?0+$/, '')}`;
+                
+                stepsDiv.classList.add('show');
+                stepsDiv.innerHTML = `
+                    <div class="calc-step">Eingabe: ${expression}</div>
+                    <div class="calc-result">Ergebnis: ${result.toFixed(4).replace(/\.?0+$/, '')}</div>
+                `;
+            } catch (e) {
+                resultSpan.textContent = '= Fehler!';
+                stepsDiv.classList.remove('show');
+            }
+        }
+        
+        function initSimulators() {
+            // Simulator 1: Scaling
+            const sim1Width = document.getElementById('sim1Width');
+            const sim1Ppi = document.getElementById('sim1Ppi');
+            const sim1NewWidth = document.getElementById('sim1NewWidth');
+            
+            if (sim1Width) {
+                const updateSim1 = () => {
+                    const width = parseFloat(sim1Width.value);
+                    const ppi = parseFloat(sim1Ppi.value);
+                    const newWidth = parseFloat(sim1NewWidth.value);
+                    
+                    document.getElementById('sim1WidthVal').textContent = `${width} cm`;
+                    document.getElementById('sim1PpiVal').textContent = `${ppi} ppi`;
+                    document.getElementById('sim1NewWidthVal').textContent = `${newWidth} cm`;
+                    
+                    const pixels = Math.round(width * ppi / 2.54);
+                    const newPpi = Math.round(pixels * 2.54 / newWidth);
+                    
+                    document.getElementById('sim1Pixels').textContent = pixels;
+                    document.getElementById('sim1NewPpi').textContent = newPpi;
+                };
+                
+                sim1Width.addEventListener('input', updateSim1);
+                sim1Ppi.addEventListener('input', updateSim1);
+                sim1NewWidth.addEventListener('input', updateSim1);
+                updateSim1();
+            }
+            
+            // Simulator 2: Storage
+            const sim2Width = document.getElementById('sim2Width');
+            const sim2Height = document.getElementById('sim2Height');
+            const sim2Depth = document.getElementById('sim2Depth');
+            
+            if (sim2Width) {
+                const updateSim2 = () => {
+                    const width = parseInt(sim2Width.value);
+                    const height = parseInt(sim2Height.value);
+                    const depth = parseInt(sim2Depth.value);
+                    
+                    document.getElementById('sim2WidthVal').textContent = `${width} px`;
+                    document.getElementById('sim2HeightVal').textContent = `${height} px`;
+                    
+                    const pixels = width * height;
+                    const megapixels = (pixels / 1000000).toFixed(2);
+                    const bytes = (pixels * depth) / 8;
+                    const mb = (bytes / 1000000).toFixed(2);
+                    const mib = (bytes / 1048576).toFixed(2);
+                    
+                    document.getElementById('sim2Megapixel').textContent = megapixels;
+                    document.getElementById('sim2MB').textContent = mb;
+                    document.getElementById('sim2MiB').textContent = mib;
+                };
+                
+                sim2Width.addEventListener('input', updateSim2);
+                sim2Height.addEventListener('input', updateSim2);
+                sim2Depth.addEventListener('change', updateSim2);
+                updateSim2();
+            }
+            
+            // Initialize calculator
+            updateCalculator();
+        }
+        
+        function updateCalculator() {
+            const type = document.getElementById('calcType').value;
+            const inputsDiv = document.getElementById('calcInputs');
+            
+            const configs = {
+                scaling: {
+                    fields: [
+                        { id: 'oldSize', label: 'Alte Größe', unit: 'cm', default: 20 },
+                        { id: 'oldPpi', label: 'Alte Auflösung', unit: 'ppi', default: 300 },
+                        { id: 'newSize', label: 'Neue Größe', unit: 'cm', default: 25 }
+                    ]
+                },
+                storage: {
+                    fields: [
+                        { id: 'width', label: 'Breite', unit: 'px', default: 1920 },
+                        { id: 'height', label: 'Höhe', unit: 'px', default: 1080 },
+                        { id: 'depth', label: 'Farbtiefe', unit: 'Bit', default: 24 }
+                    ]
+                },
+                pixels: {
+                    fields: [
+                        { id: 'size', label: 'Größe', unit: 'cm', default: 10 },
+                        { id: 'ppi', label: 'Auflösung', unit: 'ppi', default: 300 }
+                    ]
+                },
+                convert: {
+                    fields: [
+                        { id: 'value', label: 'Wert', unit: '', default: 100 },
+                        { id: 'from', label: 'Von', unit: 'px/cm', default: 0, isSelect: true, options: ['px/cm → ppi', 'ppi → px/cm', 'kB → KiB', 'MB → MiB'] }
+                    ]
+                }
+            };
+            
+            const config = configs[type];
+            inputsDiv.innerHTML = config.fields.map(f => {
+                if (f.isSelect) {
+                    return `
+                        <div class="calc-row">
+                            <span class="calc-label">${f.label}:</span>
+                            <select id="calc_${f.id}" class="calc-input" style="width: 180px;">
+                                ${f.options.map(o => `<option value="${o}">${o}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="calc-row">
+                        <span class="calc-label">${f.label}:</span>
+                        <input type="number" step="any" class="calc-input" id="calc_${f.id}" value="${f.default}">
+                        <span class="answer-unit">${f.unit}</span>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('calcSteps').classList.remove('show');
+        }
+        
+        function calculate() {
+            const type = document.getElementById('calcType').value;
+            const stepsDiv = document.getElementById('calcSteps');
+            let steps = [];
+            let result = 0;
+            
+            if (type === 'scaling') {
+                const oldSize = parseFloat(document.getElementById('calc_oldSize').value);
+                const oldPpi = parseFloat(document.getElementById('calc_oldPpi').value);
+                const newSize = parseFloat(document.getElementById('calc_newSize').value);
+                
+                const pixels = Math.round(oldSize * oldPpi / 2.54);
+                const newPpi = pixels * 2.54 / newSize;
+                
+                steps = [
+                    `Schritt 1: Pixelanzahl berechnen`,
+                    `Pixel = ${oldSize} cm × ${oldPpi} ppi / 2,54 = ${pixels} px`,
+                    `Schritt 2: Neue Auflösung berechnen`,
+                    `Neue ppi = ${pixels} px × 2,54 / ${newSize} cm = ${newPpi.toFixed(2)} ppi`,
+                    `Oder direkt: ${oldPpi} × (${oldSize}/${newSize}) = ${newPpi.toFixed(2)} ppi`
+                ];
+                result = newPpi.toFixed(2) + ' ppi';
+            }
+            else if (type === 'storage') {
+                const width = parseInt(document.getElementById('calc_width').value);
+                const height = parseInt(document.getElementById('calc_height').value);
+                const depth = parseInt(document.getElementById('calc_depth').value);
+                
+                const pixels = width * height;
+                const bits = pixels * depth;
+                const bytes = bits / 8;
+                const kb = bytes / 1000;
+                const kib = bytes / 1024;
+                const mb = bytes / 1000000;
+                const mib = bytes / 1048576;
+                
+                steps = [
+                    `Schritt 1: Pixelanzahl`,
+                    `${width} × ${height} = ${pixels.toLocaleString()} Pixel`,
+                    `Schritt 2: Datenmenge in Bit`,
+                    `${pixels.toLocaleString()} × ${depth} Bit = ${bits.toLocaleString()} Bit`,
+                    `Schritt 3: Umrechnung in Byte`,
+                    `${bits.toLocaleString()} / 8 = ${bytes.toLocaleString()} Byte`,
+                    `Schritt 4: Verschiedene Einheiten`,
+                    `${kb.toFixed(2)} kB | ${kib.toFixed(2)} KiB`,
+                    `${mb.toFixed(2)} MB | ${mib.toFixed(2)} MiB`
+                ];
+                result = `${mb.toFixed(2)} MB / ${mib.toFixed(2)} MiB`;
+            }
+            else if (type === 'pixels') {
+                const size = parseFloat(document.getElementById('calc_size').value);
+                const ppi = parseFloat(document.getElementById('calc_ppi').value);
+                
+                const pixels = size * ppi / 2.54;
+                
+                steps = [
+                    `Formel: Pixel = Größe (cm) × Auflösung (ppi) / 2,54`,
+                    `Pixel = ${size} cm × ${ppi} ppi / 2,54`,
+                    `Pixel = ${pixels.toFixed(2)}`
+                ];
+                result = Math.round(pixels) + ' Pixel';
+            }
+            else if (type === 'convert') {
+                const value = parseFloat(document.getElementById('calc_value').value);
+                const conversion = document.getElementById('calc_from').value;
+                
+                let converted;
+                if (conversion === 'px/cm → ppi') {
+                    converted = value * 2.54;
+                    steps = [`${value} px/cm × 2,54 = ${converted.toFixed(2)} ppi`];
+                    result = converted.toFixed(2) + ' ppi';
+                } else if (conversion === 'ppi → px/cm') {
+                    converted = value / 2.54;
+                    steps = [`${value} ppi / 2,54 = ${converted.toFixed(2)} px/cm`];
+                    result = converted.toFixed(2) + ' px/cm';
+                } else if (conversion === 'kB → KiB') {
+                    const bytes = value * 1000;
+                    converted = bytes / 1024;
+                    steps = [`${value} kB = ${value * 1000} Byte`, `${value * 1000} Byte / 1024 = ${converted.toFixed(4)} KiB`];
+                    result = converted.toFixed(4) + ' KiB';
+                } else if (conversion === 'MB → MiB') {
+                    const bytes = value * 1000000;
+                    converted = bytes / 1048576;
+                    steps = [`${value} MB = ${(value * 1000000).toLocaleString()} Byte`, `${(value * 1000000).toLocaleString()} Byte / 1.048.576 = ${converted.toFixed(4)} MiB`];
+                    result = converted.toFixed(4) + ' MiB';
+                }
+            }
+            
+            stepsDiv.classList.add('show');
+            stepsDiv.innerHTML = steps.map(s => `<div class="calc-step">${s}</div>`).join('') +
+                `<div class="calc-result">Ergebnis: ${result}</div>`;
+        }
+        
+        // ============ RENDER ============
+        function render() {
+            renderSidebar();
+            renderProgress();
+            renderContent();
+        }
+        
+        // ============ FIXED CALCULATOR TOGGLE ============
+        function toggleFixedCalc() {
+            const calc = document.getElementById('fixedCalc');
+            const toggleText = document.getElementById('calcToggleText');
+            calc.classList.toggle('collapsed');
+            if (calc.classList.contains('collapsed')) {
+                toggleText.textContent = '▲ Details';
+            } else {
+                toggleText.textContent = '▼ Details';
+            }
+        }
+        
+        function showFixedCalc(show) {
+            const calc = document.getElementById('fixedCalc');
+            const content = document.getElementById('content');
+            if (show) {
+                calc.classList.add('show');
+                content.style.paddingTop = '100px';
+            } else {
+                calc.classList.remove('show');
+                content.style.paddingTop = '30px';
+            }
+        }
+        
+        // ============ PDF GENERATION ============
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const centerX = pageWidth / 2;
+            const margin = 20;
+            let y = 20;
+            
+            // Collect data
+            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C];
+            const totalExercises = allExercises.length;
+            const correctCount = Object.values(state.answers).filter(a => a.correct).length;
+            const percentage = Math.round((correctCount / totalExercises) * 100);
+            
+            // Header
+            doc.setFillColor(99, 102, 241);
+            doc.rect(0, 0, pageWidth, 35, 'F');
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.setTextColor(255, 255, 255);
+            doc.text('Bildauflösung & Speicherbedarf', centerX, 15, { align: 'center' });
+            
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+            doc.text('GINF Lernkurs - Ergebnisbericht', centerX, 25, { align: 'center' });
+            
+            y = 45;
+            
+            // Student Info
+            doc.setTextColor(30, 30, 30);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(14);
+            doc.text('Schüler/in: ' + state.studentName, margin, y);
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.text('Datum: ' + new Date().toLocaleDateString('de-AT', { day: '2-digit', month: 'long', year: 'numeric' }), pageWidth - margin, y, { align: 'right' });
+            
+            y += 15;
+            
+            // Results Box
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(margin, y, pageWidth - 2*margin, 35, 3, 3, 'F');
+            doc.setDrawColor(99, 102, 241);
+            doc.setLineWidth(0.5);
+            doc.roundedRect(margin, y, pageWidth - 2*margin, 35, 3, 3, 'S');
+            
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(12);
+            doc.setTextColor(99, 102, 241);
+            doc.text('ERGEBNIS', centerX, y + 8, { align: 'center' });
+            
+            // Score display
+            const scoreColor = percentage >= 80 ? [22, 163, 74] : percentage >= 50 ? [245, 158, 11] : [239, 68, 68];
+            doc.setFontSize(28);
+            doc.setTextColor(...scoreColor);
+            doc.text(percentage + '%', centerX, y + 25, { align: 'center' });
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(state.points + ' von ' + state.maxPoints + ' Punkten | ' + correctCount + ' von ' + totalExercises + ' Aufgaben richtig', centerX, y + 32, { align: 'center' });
+            
+            y += 45;
+            
+            // Errors section
+            const errorsList = [];
+            for (const [key, value] of Object.entries(state.answers)) {
+                if (!value.correct) {
+                    const [group, id] = key.split('_');
+                    const ex = exercises[group].find(e => String(e.id) === id);
+                    if (ex) {
+                        errorsList.push({
+                            id: ex.id,
+                            question: ex.question,
+                            given: value.given,
+                            correct: ex.answer,
+                            unit: ex.unit
+                        });
+                    }
+                }
+            }
+            
+            if (errorsList.length > 0) {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(239, 68, 68);
+                doc.text('Aufgaben mit Fehlern (' + errorsList.length + '):', margin, y);
+                y += 8;
+                
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(60, 60, 60);
+                
+                errorsList.forEach((err, index) => {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    
+                    // Question (truncated if too long)
+                    let questionText = 'Aufgabe ' + err.id + ': ' + err.question;
+                    if (questionText.length > 100) {
+                        questionText = questionText.substring(0, 97) + '...';
+                    }
+                    
+                    const lines = doc.splitTextToSize(questionText, pageWidth - 2*margin);
+                    doc.text(lines, margin, y);
+                    y += lines.length * 4 + 2;
+                    
+                    doc.setTextColor(239, 68, 68);
+                    doc.text('Deine Antwort: ' + err.given + ' ' + err.unit, margin + 5, y);
+                    doc.setTextColor(22, 163, 74);
+                    doc.text('Richtig: ' + err.correct + ' ' + err.unit, margin + 70, y);
+                    doc.setTextColor(60, 60, 60);
+                    
+                    y += 8;
+                });
+            } else {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(14);
+                doc.setTextColor(22, 163, 74);
+                doc.text('Alle Aufgaben richtig gelöst!', centerX, y, { align: 'center' });
+            }
+            
+            // Footer
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text('BPI Mödling - GINF Lernkurs', centerX, 290, { align: 'center' });
+            
+            // Save
+            doc.save('Ergebnis_' + state.studentName.replace(/\s+/g, '_') + '_Bildaufloesung.pdf');
+        }
+        
+        // ============ EMAIL FUNCTION ============
+        function sendEmail() {
+            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C];
+            const totalExercises = allExercises.length;
+            const correctCount = Object.values(state.answers).filter(a => a.correct).length;
+            const percentage = Math.round((correctCount / totalExercises) * 100);
+            
+            // Collect errors
+            const errorsList = [];
+            for (const [key, value] of Object.entries(state.answers)) {
+                if (!value.correct) {
+                    const [group, id] = key.split('_');
+                    const ex = exercises[group].find(e => String(e.id) === id);
+                    if (ex) {
+                        errorsList.push(`Aufgabe ${ex.id}: ${value.given} ${ex.unit} (richtig: ${ex.correct} ${ex.unit})`);
+                    }
+                }
+            }
+            
+            const subject = encodeURIComponent(`GINF Ergebnis: Bildauflösung & Speicherbedarf - ${state.studentName}`);
+            const body = encodeURIComponent(
+`Sehr geehrte Damen und Herren,
+
+hiermit übermittle ich meine Ergebnisse für den Lernkurs "Bildauflösung & Speicherbedarf".
+
+==============================
+ERGEBNISÜBERSICHT
+==============================
+
+Name: ${state.studentName}
+Datum: ${new Date().toLocaleDateString('de-AT')}
+
+Gesamtergebnis: ${percentage}%
+Punkte: ${state.points} von ${state.maxPoints}
+Aufgaben richtig: ${correctCount} von ${totalExercises}
+
+${errorsList.length > 0 ? `
+------------------------------
+Aufgaben mit Fehlern (${errorsList.length}):
+------------------------------
+${errorsList.join('\n')}
+` : 'Alle Aufgaben wurden richtig gelöst!'}
+
+==============================
+
+Mit freundlichen Grüßen
+${state.studentName}`
+            );
+            
+            // E-Mail-Adresse hier anpassen
+            const emailAddress = 'modic@akademie.bpi.ac.at';
+            window.open(`mailto:${emailAddress}?subject=${subject}&body=${body}`, '_blank');
+            
+            alert('Das E-Mail-Programm wird geöffnet.\n\nBitte füge das PDF als Anhang hinzu, falls du es bereits heruntergeladen hast.');
+        }
+        
+        // ============ INIT ============
+        render();
+    </script>
+</body>
+</html>
