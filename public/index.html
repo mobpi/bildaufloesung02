@@ -44,6 +44,29 @@
             flex-wrap: wrap;
             gap: 10px;
         }
+
+        /* NEW: Mobile Sidebar Toggle */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .sidebar-toggle-btn {
+            display: none; /* Hide on desktop */
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
         
         .logo {
             font-size: 1.4em;
@@ -120,6 +143,7 @@
             left: 0;
             height: calc(100vh - 70px);
             z-index: 90;
+            transition: transform 0.3s ease-in-out;
         }
         
         .sidebar-spacer {
@@ -620,6 +644,20 @@
             border: 1px solid var(--danger);
             color: var(--danger);
         }
+
+        /* NEW: Solution Toggle for Correct Answers */
+        .solution-toggle {
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .solution-details {
+            display: none;
+            margin-top: 10px;
+        }
         
         /* Simulation Styles */
         .simulator {
@@ -694,6 +732,14 @@
             text-align: center;
             font-weight: bold;
             color: var(--accent);
+        }
+
+        /* NEW: Audio Quantization Steps Display */
+        .quantization-steps {
+            margin-top: 15px;
+            text-align: center;
+            font-size: 0.9em;
+            color: var(--text-muted);
         }
         
         .output-display {
@@ -833,33 +879,55 @@
         @media (max-width: 900px) {
             .sidebar {
                 position: fixed;
-                width: 100%;
-                height: auto;
-                max-height: 50vh;
-                top: auto;
-                bottom: 0;
+                width: 280px;
+                height: calc(100vh - 70px);
+                top: 70px;
                 left: 0;
-                border-right: none;
-                border-top: 2px solid var(--bg-light);
+                transform: translateX(-100%); /* Hidden by default */
                 z-index: 95;
             }
+
+            .sidebar.active {
+                transform: translateX(0); /* Shown */
+            }
+
+            .sidebar-toggle-btn {
+                display: block; /* Show on mobile */
+            }
+
+            .sidebar-spacer {
+                display: none; /* No spacer needed when sidebar is hidden */
+            }
+            
             .content {
                 margin-left: 0;
-                padding-bottom: 200px;
+                padding-bottom: 20px;
             }
+
+            /* Adjust fixed calculator position for mobile */
             .fixed-calculator {
                 left: 0;
                 top: 70px;
+                width: 100%;
             }
+
             .fixed-calculator .calc-row {
                 display: flex;
                 flex-wrap: wrap;
                 margin-left: 0;
                 margin-top: 10px;
+                width: 100%;
             }
             .fixed-calculator .calc-input {
-                width: 200px !important;
+                width: 100% !important;
             }
+            .fixed-calculator .calc-btn {
+                width: 100%;
+            }
+            .fixed-calculator #quickCalc {
+                 width: calc(100% - 10px) !important;
+            }
+            
         }
         
         @media (max-width: 600px) {
@@ -1021,26 +1089,31 @@
                 👤 <span id="studentNameDisplay"></span>
             </span>
         </div>
-        <div id="pointsDisplay" class="points-display" style="display: none;">
-            ⭐ <span id="totalPointsDisplay">0</span> / <span id="maxPointsDisplay">44</span> Punkte
-        </div>
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+
+        <div class="header-controls">
+            <button class="sidebar-toggle-btn" onclick="toggleMobileSidebar()">☰</button>
+            <div id="pointsDisplay" class="points-display" style="display: none;">
+                ⭐ <span id="totalPointsDisplay">0</span> / <span id="maxPointsDisplay">44</span> Punkte
             </div>
-            <div class="progress-text">
-                <span id="progressText">0%</span>
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="progressText">0%</span>
+                </div>
             </div>
         </div>
     </div>
     
     <div class="main-container">
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <h3>📚 Kapitel</h3>
             <ul class="module-list" id="moduleList"></ul>
         </nav>
         
-        <!-- Fixed Calculator - shown on exercise pages -->
+        <div class="sidebar-spacer" id="sidebarSpacer"></div>
+        
         <div class="fixed-calculator" id="fixedCalc">
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <span class="calculator-header" style="color: var(--purple); font-weight: bold;">🧮 Rechner</span>
@@ -1064,8 +1137,10 @@
     </div>
 
     <script>
-        // ============ STATE ============
-        const state = {
+        // ============ STATE (Loaded from/Saved to Local Storage) ============
+        const STORAGE_KEY = 'glnf_digitalisierung_state';
+
+        let state = {
             studentName: '',
             currentModule: 'welcome',
             points: 0,
@@ -1074,6 +1149,8 @@
             answers: {},
             errors: []
         };
+
+        const initialMaxPoints = 63; // Max points from all exercises (A-D)
         
         // ============ MODULES ============
         const modules = [
@@ -1087,7 +1164,7 @@
             { id: 'zusammenfassung', title: 'Zusammenfassung', icon: '📊', type: 'results' }
         ];
         
-        // ============ EXERCISES DATA ============
+        // ============ EXERCISES DATA (Kept original data) ============
         const exercises = {
             A: [
                 {
@@ -1504,6 +1581,45 @@
             ]
         };
         
+        // ============ HELPER FUNCTIONS (Local Storage) ============
+        function saveState() {
+            try {
+                // Konvertiere Set zu Array für JSON.stringify
+                const stateToSave = {
+                    ...state,
+                    completedModules: Array.from(state.completedModules)
+                };
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+            } catch (e) {
+                console.error("Fehler beim Speichern des Zustands:", e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const savedState = localStorage.getItem(STORAGE_KEY);
+                if (savedState) {
+                    const loadedState = JSON.parse(savedState);
+                    // Konvertiere Array zurück zu Set
+                    loadedState.completedModules = new Set(loadedState.completedModules);
+                    // Aktualisiere den Zustand
+                    state = { ...state, ...loadedState };
+
+                    // Initialisiere die UI-Elemente
+                    if (state.studentName) {
+                        document.getElementById('studentDisplay').style.display = 'flex';
+                        document.getElementById('studentNameDisplay').textContent = state.studentName;
+                        document.getElementById('pointsDisplay').style.display = 'block';
+                    }
+                    document.getElementById('maxPointsDisplay').textContent = state.maxPoints;
+                }
+            } catch (e) {
+                console.error("Fehler beim Laden des Zustands:", e);
+                // Bei Fehler alten Zustand löschen, um Endlosschleife zu verhindern
+                localStorage.removeItem(STORAGE_KEY);
+            }
+        }
+
         // ============ RENDER FUNCTIONS ============
         function renderSidebar() {
             const list = document.getElementById('moduleList');
@@ -1530,6 +1646,7 @@
             document.getElementById('progressFill').style.width = `${percent}%`;
             document.getElementById('progressText').textContent = `${percent}%`;
             document.getElementById('totalPointsDisplay').textContent = current;
+            document.getElementById('maxPointsDisplay').textContent = total;
         }
         
         function renderContent() {
@@ -1539,8 +1656,14 @@
             if (!module) return;
             
             // Show/hide fixed calculator based on module type
-            const showCalc = module.type === 'exercises';
+            const showCalc = module.type === 'exercises' || module.type === 'simulation';
             showFixedCalc(showCalc);
+
+            // Hide mobile sidebar on content change
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar.classList.contains('active')) {
+                sidebar.classList.remove('active');
+            }
             
             switch (module.type) {
                 case 'welcome':
@@ -1629,25 +1752,28 @@
                             </tr>
                             <tr>
                                 <td><code>kB</code></td>
-                                <td>Kilobyte (dezimal)</td>
+                                <td>Kilobyte (dezimal, 10³)</td>
                                 <td>1 kB = 1.000 Byte</td>
                             </tr>
                             <tr>
                                 <td><code>KiB</code></td>
-                                <td>Kibibyte (binär)</td>
+                                <td>Kibibyte (binär, 2¹⁰)</td>
                                 <td>1 KiB = 1.024 Byte</td>
                             </tr>
                             <tr>
                                 <td><code>MB</code></td>
-                                <td>Megabyte (dezimal)</td>
+                                <td>Megabyte (dezimal, 10⁶)</td>
                                 <td>1 MB = 1.000.000 Byte</td>
                             </tr>
                             <tr>
                                 <td><code>MiB</code></td>
-                                <td>Mebibyte (binär)</td>
+                                <td>Mebibyte (binär, 2²⁰)</td>
                                 <td>1 MiB = 1.048.576 Byte</td>
                             </tr>
                         </table>
+                        <div class="tip-box">
+                            <strong>💡 Wichtig:</strong> Festplattenhersteller nutzen oft die dezimale Basis (MB, GB), während Betriebssysteme und Programme die binäre Basis (MiB, GiB) zur Anzeige verwenden.
+                        </div>
                     </div>
                     
                     <div class="section">
@@ -1808,24 +1934,31 @@
                         
                         <div class="simulator">
                             <div class="sim-header">🔧 Parameter einstellen</div>
+                            <div class="input-row" style="justify-content: center; margin-bottom: 20px;">
+                                <span class="input-label" style="width: auto;">Einheiten:</span>
+                                <select id="sim1Unit" style="padding: 8px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text);" onchange="updateSim1Units()">
+                                    <option value="cm_ppi">cm & ppi</option>
+                                    <option value="mm_pxcm">mm & px/cm</option>
+                                </select>
+                            </div>
                             <div class="sim-content">
                                 <div class="input-controls">
                                     <div class="input-row">
-                                        <span class="input-label">Urspr. Breite:</span>
+                                        <span class="input-label" id="sim1WidthLabel">Urspr. Breite:</span>
                                         <div class="slider-container">
                                             <input type="range" class="slider" id="sim1Width" min="5" max="50" value="20">
                                             <span class="slider-value" id="sim1WidthVal">20 cm</span>
                                         </div>
                                     </div>
                                     <div class="input-row">
-                                        <span class="input-label">Urspr. ppi:</span>
+                                        <span class="input-label" id="sim1PpiLabel">Urspr. ppi:</span>
                                         <div class="slider-container">
                                             <input type="range" class="slider" id="sim1Ppi" min="72" max="600" value="300" step="1">
                                             <span class="slider-value" id="sim1PpiVal">300 ppi</span>
                                         </div>
                                     </div>
                                     <div class="input-row">
-                                        <span class="input-label">Neue Breite:</span>
+                                        <span class="input-label" id="sim1NewWidthLabel">Neue Breite:</span>
                                         <div class="slider-container">
                                             <input type="range" class="slider" id="sim1NewWidth" min="5" max="50" value="25">
                                             <span class="slider-value" id="sim1NewWidthVal">25 cm</span>
@@ -1839,7 +1972,7 @@
                                     </div>
                                     <div class="output-display">
                                         <div class="output-value" id="sim1NewPpi">240</div>
-                                        <div class="output-label">Neue ppi</div>
+                                        <div class="output-label" id="sim1NewPpiLabel">Neue ppi</div>
                                     </div>
                                 </div>
                             </div>
@@ -1957,6 +2090,9 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="quantization-steps">
+                                Quantisierungsstufen: <span id="sim3Steps">65536</span> (2^Bittiefe)
+                            </div>
                         </div>
                     </div>
                     
@@ -2029,6 +2165,14 @@
             const existingAnswer = state.answers[answerId];
             const isAnswered = existingAnswer !== undefined;
             const isCorrect = isAnswered && existingAnswer.correct;
+
+            // Neue Struktur für Lösungsweg (toggleable details)
+            const solutionDetails = `
+                <div class="solution-details" id="solution_details_${answerId}">
+                    <strong>Lösung:</strong>
+                    <pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">${ex.solution}</pre>
+                </div>
+            `;
             
             return `
                 <div class="exercise-container ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" id="ex_${answerId}">
@@ -2039,10 +2183,10 @@
                     <div class="exercise-question">${ex.question}</div>
                     
                     <div class="answer-row">
-                        <input type="number" step="any" class="answer-input ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" 
+                        <input type="text" step="any" class="answer-input ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" 
                                id="input_${answerId}" 
                                placeholder="Antwort"
-                               value="${existingAnswer ? existingAnswer.given : ''}"
+                               value="${existingAnswer ? existingAnswer.given.toLocaleString('de-DE') : ''}"
                                ${isAnswered ? 'disabled' : ''}>
                         <span class="answer-unit">${ex.unit}</span>
                         <button class="check-btn" onclick="checkAnswer('${group}', '${ex.id}')" 
@@ -2053,8 +2197,10 @@
                     
                     <div class="feedback ${isAnswered ? 'show' : ''} ${isAnswered ? (isCorrect ? 'correct' : 'incorrect') : ''}" id="feedback_${answerId}">
                         ${isAnswered ? (isCorrect ? 
-                            `<strong>✓ Richtig!</strong> +${ex.points} Punkte` : 
-                            `<strong>✗ Leider falsch.</strong> Deine Antwort: ${existingAnswer.given} ${ex.unit}<br>Richtige Antwort: ${ex.answer} ${ex.unit} (Toleranz: ±${ex.tolerance})<br><br><strong>Lösung:</strong><br><pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">${ex.solution}</pre>`
+                            `<strong>✓ Richtig!</strong> +${ex.points} Punkte 
+                             <span class="solution-toggle" onclick="toggleSolution('${answerId}')">Lösungsweg anzeigen</span>
+                             ${solutionDetails}` : 
+                            `<strong>✗ Leider falsch.</strong> Deine Antwort: ${existingAnswer.given.toLocaleString('de-DE')} ${ex.unit}<br>Richtige Antwort: ${ex.answer} ${ex.unit} (Toleranz: ±${ex.tolerance})<br><br><strong>Lösung:</strong><br><pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">${ex.solution}</pre>`
                         ) : ''}
                     </div>
                 </div>
@@ -2130,7 +2276,7 @@
                                 <div class="error-item">
                                     <div class="error-question"><strong>Aufgabe ${err.id}:</strong> ${err.question}</div>
                                     <div class="error-details">
-                                        <span class="error-given">Deine Antwort: ${err.given} ${err.unit}</span>
+                                        <span class="error-given">Deine Antwort: ${err.given.toLocaleString('de-DE')} ${err.unit}</span>
                                         <span class="error-correct">Richtig: ${err.correct} ${err.unit}</span>
                                     </div>
                                     <details style="margin-top: 10px;">
@@ -2147,7 +2293,6 @@
                         </div>
                     ` : ''}
                     
-                    <!-- PDF & E-Mail Sektion -->
                     <div class="certificate-section">
                         <h3>📄 Ergebnisse speichern & versenden</h3>
                         <p style="color: var(--text-muted); margin-bottom: 20px;">
@@ -2170,6 +2315,13 @@
                 </div>
             `;
         }
+
+        function toggleSolution(answerId) {
+            const details = document.getElementById(`solution_details_${answerId}`);
+            if (details) {
+                details.style.display = details.style.display === 'block' ? 'none' : 'block';
+            }
+        }
         
         // ============ INTERACTION FUNCTIONS ============
         function startCourse() {
@@ -2179,12 +2331,14 @@
                 document.getElementById('studentDisplay').style.display = 'flex';
                 document.getElementById('studentNameDisplay').textContent = state.studentName;
                 document.getElementById('pointsDisplay').style.display = 'block';
+                saveState();
                 render();
             }
         }
         
         function navigateTo(moduleId) {
             state.currentModule = moduleId;
+            saveState();
             render();
             window.scrollTo(0, 0);
         }
@@ -2196,9 +2350,12 @@
             
             if (!input || !exercise) return;
             
-            const givenValue = parseFloat(input.value.replace(',', '.'));
+            // NEW: Komma-Ersetzung und Parsing
+            const cleanedValue = input.value.replace(',', '.');
+            const givenValue = parseFloat(cleanedValue);
+
             if (isNaN(givenValue)) {
-                alert('Bitte gib eine gültige Zahl ein!');
+                alert('Bitte gib eine gültige Zahl ein (Trennzeichen ist Punkt oder Komma)!');
                 return;
             }
             
@@ -2206,6 +2363,12 @@
             const tolerance = exercise.tolerance;
             const isCorrect = Math.abs(givenValue - correctValue) <= tolerance;
             
+            // Check if already answered to prevent double points
+            if (state.answers[answerId] && state.answers[answerId].correct) {
+                 // Already correct, do nothing
+                 return;
+            }
+
             state.answers[answerId] = {
                 given: givenValue,
                 correct: isCorrect
@@ -2214,43 +2377,64 @@
             if (isCorrect) {
                 state.points += exercise.points;
                 showPointsAnimation(exercise.points);
+                // Entferne Fehler, falls vorhanden (obwohl das bei der aktuellen Logik nicht passieren sollte)
+                state.errors = state.errors.filter(e => e.id !== exercise.id);
             } else {
-                state.errors.push({
-                    id: exercise.id,
-                    question: exercise.question,
-                    given: givenValue,
-                    correct: correctValue,
-                    unit: exercise.unit
-                });
+                 // Füge Fehler nur hinzu, wenn er nicht schon da ist und falsch beantwortet wurde
+                 if (!state.errors.some(e => e.id === exercise.id)) {
+                    state.errors.push({
+                        id: exercise.id,
+                        question: exercise.question,
+                        given: givenValue,
+                        correct: correctValue,
+                        unit: exercise.unit
+                    });
+                 }
             }
             
-            // Update UI
-            input.classList.add(isCorrect ? 'correct' : 'incorrect');
-            input.disabled = true;
+            // Mark module as completed (always)
+            if (modules.find(m => m.id === state.currentModule && m.type === 'exercises')) {
+                // Prüfen, ob alle Aufgaben im Modul beantwortet sind
+                const allAnswered = exercises[group].every(ex => state.answers[`${group}_${ex.id}`] !== undefined);
+                if (allAnswered) {
+                    state.completedModules.add(state.currentModule);
+                }
+            }
+
+
+            saveState();
             
+            // Update UI (partial rerender for the exercise)
             const container = document.getElementById(`ex_${answerId}`);
-            container.classList.add(isCorrect ? 'correct' : 'incorrect');
-            
-            const feedback = document.getElementById(`feedback_${answerId}`);
-            feedback.classList.add('show', isCorrect ? 'correct' : 'incorrect');
-            feedback.innerHTML = isCorrect ? 
-                `<strong>✓ Richtig!</strong> +${exercise.points} Punkte` :
-                `<strong>✗ Leider falsch.</strong> Deine Antwort: ${givenValue} ${exercise.unit}<br>Richtige Antwort: ${correctValue} ${exercise.unit} (Toleranz: ±${tolerance})<br><br><strong>Lösung:</strong><br><pre style="white-space: pre-wrap; font-family: monospace; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">${exercise.solution}</pre>`;
-            
-            const btn = container.querySelector('.check-btn');
-            btn.disabled = true;
-            btn.textContent = isCorrect ? '✓ Richtig' : '✗ Falsch';
-            
+            container.outerHTML = renderExercise(exercise, group);
+
             renderProgress();
+
+            // Scroll to next exercise if present
+            const nextIndex = exercises[group].findIndex(e => String(e.id) === String(id)) + 1;
+            if (nextIndex < exercises[group].length) {
+                const nextEx = exercises[group][nextIndex];
+                const nextInput = document.getElementById(`input_${group}_${nextEx.id}`);
+                if (nextInput) {
+                    nextInput.focus();
+                }
+            }
+
         }
         
         function showPointsAnimation(points) {
+            const pointsDisplay = document.getElementById('pointsDisplay');
+            if (!pointsDisplay) return;
+
+            const rect = pointsDisplay.getBoundingClientRect();
+
             const anim = document.createElement('div');
             anim.className = 'points-animation';
             anim.textContent = `+${points}`;
-            anim.style.left = (Math.random() * 200 + 100) + 'px';
-            anim.style.top = '100px';
+            anim.style.left = (rect.left + rect.width / 2) + 'px';
+            anim.style.top = (rect.top + window.scrollY) + 'px';
             document.body.appendChild(anim);
+            
             setTimeout(() => anim.remove(), 1000);
         }
         
@@ -2260,30 +2444,47 @@
                 state.answers = {};
                 state.errors = [];
                 state.completedModules.clear();
-                navigateTo('aufgabenA');
+                localStorage.removeItem(STORAGE_KEY);
+                navigateTo('welcome');
             }
         }
         
         // ============ CALCULATOR FUNCTIONS ============
+        
+        // Safe math evaluation with support for ^ (power)
+        function safeCalculateExpression(expression) {
+            // Replace comma with dot for international input
+            let expr = expression.replace(/,/g, '.');
+            
+            // Replace ^ with ** for JavaScript Math
+            expr = expr.replace(/\^/g, '**');
+
+            // Regex to check if expression contains only numbers, +, -, *, /, (), ., and ** (from ^)
+            const safeExpression = /^[\d\s\+\-\*\/\.\(\)]+$/;
+            
+            // Safety check against malicious code injection
+            if (!safeExpression.test(expr.replace(/\*\*/g, ''))) {
+                throw new Error("Ungültige Zeichen im Ausdruck.");
+            }
+            
+            // Safely evaluate the expression
+            return new Function('return ' + expr)();
+        }
+
         function quickCalculate() {
             const input = document.getElementById('quickCalc');
             const resultSpan = document.getElementById('quickResult');
             const stepsDiv = document.getElementById('quickSteps');
             
             try {
-                // Safe evaluation mit Potenzrechnung (^ zu **)
-                let expression = input.value.replace(/,/g, '.');
-                // Ersetze ^ durch ** für Potenzrechnung
-                expression = expression.replace(/\^/g, '**');
-                const sanitized = expression.replace(/[^0-9+\-*/.()]/g, '');
-                const result = Function('"use strict"; return (' + sanitized + ')')();
+                const result = safeCalculateExpression(input.value);
                 
-                // Formatierung: große Zahlen ohne Dezimalstellen
+                // Formatierung: große Zahlen ohne unnötige Dezimalstellen
                 let formattedResult;
                 if (Number.isInteger(result) || Math.abs(result) >= 1000) {
-                    formattedResult = Math.round(result).toLocaleString('de-DE');
+                    formattedResult = Math.round(result).toLocaleString('de-DE', { maximumFractionDigits: 0 });
                 } else {
-                    formattedResult = result.toFixed(4).replace(/\.?0+$/, '');
+                    formattedResult = result.toFixed(4).replace(/\.?0+$/, '').toLocaleString('de-DE');
                 }
                 
                 resultSpan.textContent = `= ${formattedResult}`;
@@ -2295,7 +2496,8 @@
                 `;
             } catch (e) {
                 resultSpan.textContent = '= Fehler!';
-                stepsDiv.classList.remove('show');
+                stepsDiv.classList.add('show');
+                stepsDiv.innerHTML = `<div class="calc-step" style="color: var(--danger);">Fehler: Ungültiger Ausdruck oder ungültige Zeichen.</div>`;
             }
         }
         
@@ -2304,28 +2506,69 @@
             const sim1Width = document.getElementById('sim1Width');
             const sim1Ppi = document.getElementById('sim1Ppi');
             const sim1NewWidth = document.getElementById('sim1NewWidth');
+            const sim1UnitSelect = document.getElementById('sim1Unit');
+
+            const updateSim1 = () => {
+                const unitType = sim1UnitSelect.value;
+                const width = parseFloat(sim1Width.value);
+                const resolution = parseFloat(sim1Ppi.value);
+                const newWidth = parseFloat(sim1NewWidth.value);
+                
+                let pixels;
+                let newResolution;
+                let unitLabel;
+                let conversionFactor = unitType === 'cm_ppi' ? 2.54 : 1;
+                
+                if (unitType === 'cm_ppi') {
+                    // Cms and ppi
+                    pixels = Math.round(width * resolution / conversionFactor);
+                    newResolution = pixels * conversionFactor / newWidth;
+                    unitLabel = 'ppi';
+                } else {
+                    // mm and px/cm (Scale everything to cm for easier calculation)
+                    const width_cm = width / 10;
+                    const newWidth_cm = newWidth / 10;
+                    
+                    pixels = Math.round(width_cm * resolution);
+                    newResolution = pixels / newWidth_cm;
+                    unitLabel = 'px/cm';
+                }
+
+                document.getElementById('sim1WidthVal').textContent = `${width} ${unitType === 'cm_ppi' ? 'cm' : 'mm'}`;
+                document.getElementById('sim1PpiVal').textContent = `${resolution} ${unitLabel}`;
+                document.getElementById('sim1NewWidthVal').textContent = `${newWidth} ${unitType === 'cm_ppi' ? 'cm' : 'mm'}`;
+                
+                document.getElementById('sim1Pixels').textContent = pixels.toLocaleString('de-DE');
+                document.getElementById('sim1NewPpi').textContent = newResolution.toFixed(2).replace(/\.?0+$/, '');
+                document.getElementById('sim1NewPpiLabel').textContent = `Neue ${unitLabel}`;
+            };
+
+            window.updateSim1Units = () => {
+                const unitType = sim1UnitSelect.value;
+                if (unitType === 'mm_pxcm') {
+                    sim1Width.max = 500; sim1Width.value = 200;
+                    sim1NewWidth.max = 500; sim1NewWidth.value = 250;
+                    sim1Ppi.min = 50; sim1Ppi.max = 250; sim1Ppi.value = 100; sim1Ppi.step = 5;
+                    document.getElementById('sim1WidthLabel').textContent = 'Urspr. Breite (mm):';
+                    document.getElementById('sim1PpiLabel').textContent = 'Urspr. px/cm:';
+                    document.getElementById('sim1NewWidthLabel').textContent = 'Neue Breite (mm):';
+                } else {
+                    sim1Width.max = 50; sim1Width.value = 20;
+                    sim1NewWidth.max = 50; sim1NewWidth.value = 25;
+                    sim1Ppi.min = 72; sim1Ppi.max = 600; sim1Ppi.value = 300; sim1Ppi.step = 1;
+                    document.getElementById('sim1WidthLabel').textContent = 'Urspr. Breite (cm):';
+                    document.getElementById('sim1PpiLabel').textContent = 'Urspr. ppi:';
+                    document.getElementById('sim1NewWidthLabel').textContent = 'Neue Breite (cm):';
+                }
+                updateSim1();
+            };
             
             if (sim1Width) {
-                const updateSim1 = () => {
-                    const width = parseFloat(sim1Width.value);
-                    const ppi = parseFloat(sim1Ppi.value);
-                    const newWidth = parseFloat(sim1NewWidth.value);
-                    
-                    document.getElementById('sim1WidthVal').textContent = `${width} cm`;
-                    document.getElementById('sim1PpiVal').textContent = `${ppi} ppi`;
-                    document.getElementById('sim1NewWidthVal').textContent = `${newWidth} cm`;
-                    
-                    const pixels = Math.round(width * ppi / 2.54);
-                    const newPpi = Math.round(pixels * 2.54 / newWidth);
-                    
-                    document.getElementById('sim1Pixels').textContent = pixels;
-                    document.getElementById('sim1NewPpi').textContent = newPpi;
-                };
-                
                 sim1Width.addEventListener('input', updateSim1);
                 sim1Ppi.addEventListener('input', updateSim1);
                 sim1NewWidth.addEventListener('input', updateSim1);
-                updateSim1();
+                sim1UnitSelect.addEventListener('change', updateSim1Units);
+                updateSim1Units();
             }
             
             // Simulator 2: Storage
@@ -2345,12 +2588,12 @@
                     const pixels = width * height;
                     const megapixels = (pixels / 1000000).toFixed(2);
                     const bytes = (pixels * depth) / 8;
-                    const mb = (bytes / 1000000).toFixed(2);
-                    const mib = (bytes / 1048576).toFixed(2);
+                    const mb = (bytes / 1000000);
+                    const mib = (bytes / 1048576);
                     
                     document.getElementById('sim2Megapixel').textContent = megapixels;
-                    document.getElementById('sim2MB').textContent = mb;
-                    document.getElementById('sim2MiB').textContent = mib;
+                    document.getElementById('sim2MB').textContent = mb.toFixed(2);
+                    document.getElementById('sim2MiB').textContent = mib.toFixed(2);
                 };
                 
                 sim2Width.addEventListener('input', updateSim2);
@@ -2364,6 +2607,7 @@
             const sim3BitDepth = document.getElementById('sim3BitDepth');
             const sim3Channels = document.getElementById('sim3Channels');
             const sim3Duration = document.getElementById('sim3Duration');
+            const sim3Steps = document.getElementById('sim3Steps');
             
             if (sim3SampleRate) {
                 const updateSim3 = () => {
@@ -2384,6 +2628,9 @@
                     document.getElementById('sim3Bitrate').textContent = bitrateKbps.toFixed(0);
                     document.getElementById('sim3MB').textContent = mb.toFixed(2);
                     document.getElementById('sim3MiB').textContent = mib.toFixed(2);
+
+                    // NEW: Quantization Steps
+                    sim3Steps.textContent = Math.pow(2, bitDepth).toLocaleString('de-DE');
                 };
                 
                 sim3SampleRate.addEventListener('change', updateSim3);
@@ -2453,7 +2700,7 @@
                 return `
                     <div class="calc-row">
                         <span class="calc-label">${f.label}:</span>
-                        <input type="number" step="any" class="calc-input" id="calc_${f.id}" value="${f.default}">
+                        <input type="text" step="any" class="calc-input" id="calc_${f.id}" value="${f.default}" oninput="this.value = this.value.replace(',', '.')">
                         <span class="answer-unit">${f.unit}</span>
                     </div>
                 `;
@@ -2466,128 +2713,136 @@
             const type = document.getElementById('calcType').value;
             const stepsDiv = document.getElementById('calcSteps');
             let steps = [];
-            let result = 0;
+            let result = '';
             
-            if (type === 'scaling') {
-                const oldSize = parseFloat(document.getElementById('calc_oldSize').value);
-                const oldPpi = parseFloat(document.getElementById('calc_oldPpi').value);
-                const newSize = parseFloat(document.getElementById('calc_newSize').value);
-                
-                const pixels = Math.round(oldSize * oldPpi / 2.54);
-                const newPpi = pixels * 2.54 / newSize;
-                
-                steps = [
-                    `Schritt 1: Pixelanzahl berechnen`,
-                    `Pixel = ${oldSize} cm × ${oldPpi} ppi / 2,54 = ${pixels} px`,
-                    `Schritt 2: Neue Auflösung berechnen`,
-                    `Neue ppi = ${pixels} px × 2,54 / ${newSize} cm = ${newPpi.toFixed(2)} ppi`,
-                    `Oder direkt: ${oldPpi} × (${oldSize}/${newSize}) = ${newPpi.toFixed(2)} ppi`
-                ];
-                result = newPpi.toFixed(2) + ' ppi';
-            }
-            else if (type === 'storage') {
-                const width = parseInt(document.getElementById('calc_width').value);
-                const height = parseInt(document.getElementById('calc_height').value);
-                const depth = parseInt(document.getElementById('calc_depth').value);
-                
-                const pixels = width * height;
-                const bits = pixels * depth;
-                const bytes = bits / 8;
-                const kb = bytes / 1000;
-                const kib = bytes / 1024;
-                const mb = bytes / 1000000;
-                const mib = bytes / 1048576;
-                
-                steps = [
-                    `Schritt 1: Pixelanzahl`,
-                    `${width} × ${height} = ${pixels.toLocaleString()} Pixel`,
-                    `Schritt 2: Datenmenge in Bit`,
-                    `${pixels.toLocaleString()} × ${depth} Bit = ${bits.toLocaleString()} Bit`,
-                    `Schritt 3: Umrechnung in Byte`,
-                    `${bits.toLocaleString()} / 8 = ${bytes.toLocaleString()} Byte`,
-                    `Schritt 4: Verschiedene Einheiten`,
-                    `${kb.toFixed(2)} kB | ${kib.toFixed(2)} KiB`,
-                    `${mb.toFixed(2)} MB | ${mib.toFixed(2)} MiB`
-                ];
-                result = `${mb.toFixed(2)} MB / ${mib.toFixed(2)} MiB`;
-            }
-            else if (type === 'pixels') {
-                const size = parseFloat(document.getElementById('calc_size').value);
-                const ppi = parseFloat(document.getElementById('calc_ppi').value);
-                
-                const pixels = size * ppi / 2.54;
-                
-                steps = [
-                    `Formel: Pixel = Größe (cm) × Auflösung (ppi) / 2,54`,
-                    `Pixel = ${size} cm × ${ppi} ppi / 2,54`,
-                    `Pixel = ${pixels.toFixed(2)}`
-                ];
-                result = Math.round(pixels) + ' Pixel';
-            }
-            else if (type === 'audio') {
-                const sampleRate = parseFloat(document.getElementById('calc_sampleRate').value);
-                const bitDepth = parseFloat(document.getElementById('calc_bitDepth').value);
-                const channels = parseFloat(document.getElementById('calc_channels').value);
-                const duration = parseFloat(document.getElementById('calc_duration').value);
-                
-                const totalSamples = sampleRate * duration;
-                const totalBits = totalSamples * bitDepth * channels;
-                const bytes = totalBits / 8;
-                const kb = bytes / 1000;
-                const mb = bytes / 1000000;
-                const mib = bytes / 1048576;
-                const bitrateKbps = (sampleRate * bitDepth * channels) / 1000;
-                
-                steps = [
-                    `Schritt 1: Samples gesamt`,
-                    `${sampleRate.toLocaleString()} Hz × ${duration} s = ${totalSamples.toLocaleString()} Samples`,
-                    `Schritt 2: Datenmenge in Bit`,
-                    `${totalSamples.toLocaleString()} × ${bitDepth} Bit × ${channels} Kanäle = ${totalBits.toLocaleString()} Bit`,
-                    `Schritt 3: Umrechnung in Byte`,
-                    `${totalBits.toLocaleString()} / 8 = ${bytes.toLocaleString()} Byte`,
-                    `Schritt 4: Ergebnisse`,
-                    `Bitrate: ${bitrateKbps.toFixed(0)} kBit/s`,
-                    `${mb.toFixed(2)} MB | ${mib.toFixed(2)} MiB`
-                ];
-                result = `${mb.toFixed(2)} MB / ${mib.toFixed(2)} MiB`;
-            }
-            else if (type === 'convert') {
-                const value = parseFloat(document.getElementById('calc_value').value);
-                const conversion = document.getElementById('calc_from').value;
-                
-                let converted;
-                if (conversion === 'px/cm → ppi') {
-                    converted = value * 2.54;
-                    steps = [`${value} px/cm × 2,54 = ${converted.toFixed(2)} ppi`];
-                    result = converted.toFixed(2) + ' ppi';
-                } else if (conversion === 'ppi → px/cm') {
-                    converted = value / 2.54;
-                    steps = [`${value} ppi / 2,54 = ${converted.toFixed(2)} px/cm`];
-                    result = converted.toFixed(2) + ' px/cm';
-                } else if (conversion === 'kB → KiB') {
-                    const bytes = value * 1000;
-                    converted = bytes / 1024;
-                    steps = [`${value} kB = ${value * 1000} Byte`, `${value * 1000} Byte / 1024 = ${converted.toFixed(4)} KiB`];
-                    result = converted.toFixed(4) + ' KiB';
-                } else if (conversion === 'MB → MiB') {
-                    const bytes = value * 1000000;
-                    converted = bytes / 1048576;
-                    steps = [`${value} MB = ${(value * 1000000).toLocaleString()} Byte`, `${(value * 1000000).toLocaleString()} Byte / 1.048.576 = ${converted.toFixed(4)} MiB`];
-                    result = converted.toFixed(4) + ' MiB';
-                } else if (conversion === 'Hz → kHz') {
-                    converted = value / 1000;
-                    steps = [`${value.toLocaleString()} Hz / 1.000 = ${converted.toFixed(3)} kHz`];
-                    result = converted.toFixed(3) + ' kHz';
-                } else if (conversion === 'kHz → Hz') {
-                    converted = value * 1000;
-                    steps = [`${value} kHz × 1.000 = ${converted.toLocaleString()} Hz`];
-                    result = converted.toLocaleString() + ' Hz';
+            const getValue = (id) => parseFloat(document.getElementById(`calc_${id}`).value.replace(',', '.'));
+            
+            try {
+                if (type === 'scaling') {
+                    const oldSize = getValue('oldSize');
+                    const oldPpi = getValue('oldPpi');
+                    const newSize = getValue('newSize');
+                    
+                    const pixels = Math.round(oldSize * oldPpi / 2.54);
+                    const newPpi = pixels * 2.54 / newSize;
+                    
+                    steps = [
+                        `Schritt 1: Pixelanzahl berechnen (konstant)`,
+                        `Pixel = ${oldSize} cm × ${oldPpi} ppi / 2,54 = ${pixels.toLocaleString('de-DE', { maximumFractionDigits: 0 })} px`,
+                        `Schritt 2: Neue Auflösung berechnen`,
+                        `Neue ppi = ${pixels.toLocaleString('de-DE', { maximumFractionDigits: 0 })} px × 2,54 / ${newSize} cm = ${newPpi.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ppi`,
+                        `Oder direkt: ${oldPpi} × (${oldSize}/${newSize}) = ${newPpi.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ppi`
+                    ];
+                    result = newPpi.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ppi';
                 }
+                else if (type === 'storage') {
+                    const width = getValue('width');
+                    const height = getValue('height');
+                    const depth = getValue('depth');
+                    
+                    const pixels = width * height;
+                    const bits = pixels * depth;
+                    const bytes = bits / 8;
+                    const kb = bytes / 1000;
+                    const kib = bytes / 1024;
+                    const mb = bytes / 1000000;
+                    const mib = bytes / 1048576;
+                    
+                    steps = [
+                        `Schritt 1: Pixelanzahl`,
+                        `${width.toLocaleString('de-DE', { maximumFractionDigits: 0 })} × ${height.toLocaleString('de-DE', { maximumFractionDigits: 0 })} = ${pixels.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Pixel`,
+                        `Schritt 2: Datenmenge in Bit`,
+                        `${pixels.toLocaleString('de-DE', { maximumFractionDigits: 0 })} × ${depth} Bit = ${bits.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Bit`,
+                        `Schritt 3: Umrechnung in Byte`,
+                        `${bits.toLocaleString('de-DE', { maximumFractionDigits: 0 })} / 8 = ${bytes.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Byte`,
+                        `Schritt 4: Verschiedene Einheiten (gerundet)`,
+                        `${kb.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kB | ${kib.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} KiB`,
+                        `${mb.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MB | ${mib.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MiB`
+                    ];
+                    result = `${mb.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MB / ${mib.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MiB`;
+                }
+                else if (type === 'pixels') {
+                    const size = getValue('size');
+                    const ppi = getValue('ppi');
+                    
+                    const pixels = size * ppi / 2.54;
+                    
+                    steps = [
+                        `Formel: Pixel = Größe (cm) × Auflösung (ppi) / 2,54`,
+                        `Pixel = ${size} cm × ${ppi} ppi / 2,54`,
+                        `Pixel = ${pixels.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ];
+                    result = Math.round(pixels).toLocaleString('de-DE') + ' Pixel';
+                }
+                else if (type === 'audio') {
+                    const sampleRate = getValue('sampleRate');
+                    const bitDepth = getValue('bitDepth');
+                    const channels = getValue('channels');
+                    const duration = getValue('duration');
+                    
+                    const totalSamples = sampleRate * duration;
+                    const totalBits = totalSamples * bitDepth * channels;
+                    const bytes = totalBits / 8;
+                    const kb = bytes / 1000;
+                    const mb = bytes / 1000000;
+                    const mib = bytes / 1048576;
+                    const bitrateKbps = (sampleRate * bitDepth * channels) / 1000;
+                    
+                    steps = [
+                        `Schritt 1: Samples gesamt`,
+                        `${sampleRate.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Hz × ${duration} s = ${totalSamples.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Samples`,
+                        `Schritt 2: Datenmenge in Bit`,
+                        `${totalSamples.toLocaleString('de-DE', { maximumFractionDigits: 0 })} × ${bitDepth} Bit × ${channels} Kanäle = ${totalBits.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Bit`,
+                        `Schritt 3: Umrechnung in Byte`,
+                        `${totalBits.toLocaleString('de-DE', { maximumFractionDigits: 0 })} / 8 = ${bytes.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Byte`,
+                        `Schritt 4: Ergebnisse (gerundet)`,
+                        `Bitrate: ${bitrateKbps.toFixed(0).toLocaleString('de-DE', { maximumFractionDigits: 0 })} kBit/s`,
+                        `${mb.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MB | ${mib.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MiB`
+                    ];
+                    result = `${mb.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MB / ${mib.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MiB`;
+                }
+                else if (type === 'convert') {
+                    const value = getValue('value');
+                    const conversion = document.getElementById('calc_from').value;
+                    
+                    let converted;
+                    if (conversion === 'px/cm → ppi') {
+                        converted = value * 2.54;
+                        steps = [`${value.toLocaleString('de-DE')} px/cm × 2,54 = ${converted.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ppi`];
+                        result = converted.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ppi';
+                    } else if (conversion === 'ppi → px/cm') {
+                        converted = value / 2.54;
+                        steps = [`${value.toLocaleString('de-DE')} ppi / 2,54 = ${converted.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} px/cm`];
+                        result = converted.toFixed(2).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' px/cm';
+                    } else if (conversion === 'kB → KiB') {
+                        const bytes = value * 1000;
+                        converted = bytes / 1024;
+                        steps = [`${value.toLocaleString('de-DE')} kB = ${bytes.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Byte`, `${bytes.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Byte / 1024 = ${converted.toFixed(4).toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} KiB`];
+                        result = converted.toFixed(4).toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + ' KiB';
+                    } else if (conversion === 'MB → MiB') {
+                        const bytes = value * 1000000;
+                        converted = bytes / 1048576;
+                        steps = [`${value.toLocaleString('de-DE')} MB = ${bytes.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Byte`, `${bytes.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Byte / 1.048.576 = ${converted.toFixed(4).toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 })} MiB`];
+                        result = converted.toFixed(4).toLocaleString('de-DE', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + ' MiB';
+                    } else if (conversion === 'Hz → kHz') {
+                        converted = value / 1000;
+                        steps = [`${value.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Hz / 1.000 = ${converted.toFixed(3).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} kHz`];
+                        result = converted.toFixed(3).toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + ' kHz';
+                    } else if (conversion === 'kHz → Hz') {
+                        converted = value * 1000;
+                        steps = [`${value.toLocaleString('de-DE')} kHz × 1.000 = ${converted.toLocaleString('de-DE', { maximumFractionDigits: 0 })} Hz`];
+                        result = converted.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' Hz';
+                    }
+                }
+                
+                stepsDiv.classList.add('show');
+                stepsDiv.innerHTML = steps.map(s => `<div class="calc-step">${s}</div>`).join('') +
+                    `<div class="calc-result">Ergebnis: ${result}</div>`;
+
+            } catch (e) {
+                stepsDiv.classList.add('show');
+                stepsDiv.innerHTML = `<div class="calc-step" style="color: var(--danger);">Fehler: Ungültiger Wert oder Rechenfehler.</div>`;
             }
-            
-            stepsDiv.classList.add('show');
-            stepsDiv.innerHTML = steps.map(s => `<div class="calc-step">${s}</div>`).join('') +
-                `<div class="calc-result">Ergebnis: ${result}</div>`;
         }
         
         // ============ RENDER ============
@@ -2595,6 +2850,12 @@
             renderSidebar();
             renderProgress();
             renderContent();
+        }
+
+        // ============ MOBILE FUNCTIONS ============
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
         }
         
         // ============ FIXED CALCULATOR TOGGLE ============
@@ -2615,13 +2876,16 @@
             if (show) {
                 calc.classList.add('show');
                 content.style.paddingTop = '100px';
+                document.getElementById('sidebarSpacer').style.display = window.innerWidth > 900 ? 'block' : 'none';
             } else {
                 calc.classList.remove('show');
                 content.style.paddingTop = '30px';
+                document.getElementById('sidebarSpacer').style.display = 'block';
             }
         }
         
         // ============ PDF GENERATION ============
+        // [Existing PDF code remains the same, using jspdf library]
         function generatePDF() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF('p', 'mm', 'a4');
@@ -2734,7 +2998,7 @@
                     y += lines.length * 4 + 2;
                     
                     doc.setTextColor(239, 68, 68);
-                    doc.text('Deine Antwort: ' + err.given + ' ' + err.unit, margin + 5, y);
+                    doc.text('Deine Antwort: ' + err.given.toLocaleString('de-DE') + ' ' + err.unit, margin + 5, y);
                     doc.setTextColor(22, 163, 74);
                     doc.text('Richtig: ' + err.correct + ' ' + err.unit, margin + 70, y);
                     doc.setTextColor(60, 60, 60);
@@ -2758,6 +3022,7 @@
         }
         
         // ============ EMAIL FUNCTION ============
+        // [Existing Email code remains the same]
         function sendEmail() {
             const allExercises = [...exercises.A, ...exercises.B, ...exercises.C, ...exercises.D];
             const totalExercises = allExercises.length;
@@ -2771,7 +3036,7 @@
                     const [group, id] = key.split('_');
                     const ex = exercises[group].find(e => String(e.id) === id);
                     if (ex) {
-                        errorsList.push(`Aufgabe ${ex.id}: ${value.given} ${ex.unit} (richtig: ${ex.correct} ${ex.unit})`);
+                        errorsList.push(`Aufgabe ${ex.id}: ${value.given.toLocaleString('de-DE')} ${ex.unit} (richtig: ${ex.correct} ${ex.unit})`);
                     }
                 }
             }
@@ -2814,7 +3079,23 @@ ${state.studentName}`
         }
         
         // ============ INIT ============
+        loadState();
         render();
+
+        // Workaround für Sidebar-Spacer (Desktop-Layout)
+        window.addEventListener('resize', () => {
+            const spacer = document.getElementById('sidebarSpacer');
+            const showCalc = modules.find(m => m.id === state.currentModule)?.type === 'exercises' || modules.find(m => m.id === state.currentModule)?.type === 'simulation';
+            if (spacer) {
+                // Nur anzeigen, wenn Desktop und keine Exercises (Exercise Pages passen sich an)
+                if (window.innerWidth > 900 && !showCalc) {
+                    spacer.style.display = 'block';
+                } else {
+                    spacer.style.display = 'none';
+                }
+            }
+        });
+        
     </script>
 </body>
 </html>
