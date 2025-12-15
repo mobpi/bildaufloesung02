@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bildauflösung & Speicherbedarf - GINF Lernkurs</title>
+    <title>Digitalisierung von Bilddaten & Audiodaten - Speicherbedarf | GINF Lernkurs</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         :root {
@@ -1016,7 +1016,7 @@
 <body>
     <div class="header">
         <div class="logo">
-            🖼️ Bildauflösung & Speicherbedarf
+            📊 Digitalisierung Bild & Audio
             <span id="studentDisplay" style="display: none;" class="student-info">
                 👤 <span id="studentNameDisplay"></span>
             </span>
@@ -1045,7 +1045,7 @@
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <span class="calculator-header" style="color: var(--purple); font-weight: bold;">🧮 Rechner</span>
                 <div class="calc-row">
-                    <input type="text" class="calc-input" id="quickCalc" placeholder="z.B. 300*20/25" style="width: 280px;" onkeypress="if(event.key==='Enter')quickCalculate()">
+                    <input type="text" class="calc-input" id="quickCalc" placeholder="z.B. 300*20/25 oder 2^16" style="width: 280px;" onkeypress="if(event.key==='Enter')quickCalculate()">
                     <button class="calc-btn" onclick="quickCalculate()">= Berechnen</button>
                     <span id="quickResult" style="margin-left: 15px; font-size: 1.1em; color: var(--secondary); font-weight: bold;"></span>
                 </div>
@@ -1578,7 +1578,7 @@
             
             return `
                 <div class="welcome-hero fade-in">
-                    <h1>🖼️ Bildauflösung & Speicherbedarf</h1>
+                    <h1>📊 Digitalisierung von Bilddaten & Audiodaten</h1>
                     <p>Lerne die wichtigsten Berechnungen rund um digitale Bilder und Audio: Pixelauflösung, Skalierung, Abtastrate und Speicherbedarf.</p>
                     <button class="start-btn" onclick="navigateTo('formeln')">Zur Formelsammlung 📐</button>
                 </div>
@@ -2140,12 +2140,12 @@
                                 </div>
                             `).join('')}
                         </div>
-                    ` : `
+                    ` : (answeredCount === totalExercises && answeredCount > 0) ? `
                         <div class="section" style="text-align: center; border-color: var(--secondary);">
                             <h2 style="color: var(--secondary);">🎉 Perfekt!</h2>
                             <p>Du hast alle Aufgaben richtig gelöst!</p>
                         </div>
-                    `}
+                    ` : ''}
                     
                     <!-- PDF & E-Mail Sektion -->
                     <div class="certificate-section">
@@ -2271,17 +2271,27 @@
             const stepsDiv = document.getElementById('quickSteps');
             
             try {
-                // Safe evaluation
-                const expression = input.value.replace(/,/g, '.');
-                const sanitized = expression.replace(/[^0-9+\-*/().]/g, '');
+                // Safe evaluation mit Potenzrechnung (^ zu **)
+                let expression = input.value.replace(/,/g, '.');
+                // Ersetze ^ durch ** für Potenzrechnung
+                expression = expression.replace(/\^/g, '**');
+                const sanitized = expression.replace(/[^0-9+\-*/.()]/g, '');
                 const result = Function('"use strict"; return (' + sanitized + ')')();
                 
-                resultSpan.textContent = `= ${result.toFixed(4).replace(/\.?0+$/, '')}`;
+                // Formatierung: große Zahlen ohne Dezimalstellen
+                let formattedResult;
+                if (Number.isInteger(result) || Math.abs(result) >= 1000) {
+                    formattedResult = Math.round(result).toLocaleString('de-DE');
+                } else {
+                    formattedResult = result.toFixed(4).replace(/\.?0+$/, '');
+                }
+                
+                resultSpan.textContent = `= ${formattedResult}`;
                 
                 stepsDiv.classList.add('show');
                 stepsDiv.innerHTML = `
-                    <div class="calc-step">Eingabe: ${expression}</div>
-                    <div class="calc-result">Ergebnis: ${result.toFixed(4).replace(/\.?0+$/, '')}</div>
+                    <div class="calc-step">Eingabe: ${input.value}</div>
+                    <div class="calc-result">Ergebnis: ${formattedResult}</div>
                 `;
             } catch (e) {
                 resultSpan.textContent = '= Fehler!';
@@ -2634,7 +2644,7 @@
             doc.setFont('helvetica', 'bold');
             doc.setFontSize(20);
             doc.setTextColor(255, 255, 255);
-            doc.text('Bildauflösung & Speicherbedarf', centerX, 15, { align: 'center' });
+            doc.text('Digitalisierung Bild & Audio', centerX, 15, { align: 'center' });
             
             doc.setFontSize(12);
             doc.setFont('helvetica', 'normal');
@@ -2766,11 +2776,11 @@
                 }
             }
             
-            const subject = encodeURIComponent(`GINF Ergebnis: Bildauflösung & Speicherbedarf - ${state.studentName}`);
+            const subject = encodeURIComponent(`GINF Ergebnis: Digitalisierung Bild & Audio - ${state.studentName}`);
             const body = encodeURIComponent(
 `Sehr geehrte Damen und Herren,
 
-hiermit übermittle ich meine Ergebnisse für den Lernkurs "Bildauflösung & Speicherbedarf".
+hiermit übermittle ich meine Ergebnisse für den Lernkurs "Digitalisierung Bild & Audio".
 
 ==============================
 ERGEBNISÜBERSICHT

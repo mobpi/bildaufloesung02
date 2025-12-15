@@ -14,6 +14,6 @@ app.get('/', (req, res) => {
 
 // Server starten
 app.listen(PORT, () => {
-    console.log(`🖼️ Bildauflösung & Speicherbedarf Lernkurs läuft auf Port ${PORT}`);
+    console.log(`📊 Digitalisierung Bild & Audio Lernkurs läuft auf Port ${PORT}`);
     console.log(`📚 BPI Mödling - GINF`);
 });

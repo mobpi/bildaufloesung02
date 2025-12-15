@@ -1,7 +1,7 @@
 {
-  "name": "bildaufloesung-lernkurs",
+  "name": "digitalisierung-lernkurs",
   "version": "1.0.0",
-  "description": "Interaktiver Lernkurs für Bildauflösung und Speicherbedarf - BPI Mödling GINF",
+  "description": "Interaktiver Lernkurs für Digitalisierung von Bilddaten & Audiodaten - BPI Mödling GINF",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

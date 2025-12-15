@@ -1,4 +1,4 @@
-# 🖼️ Bildauflösung & Speicherbedarf - GINF Lernkurs
+# 📊 Digitalisierung von Bilddaten & Audiodaten - GINF Lernkurs
 
 Interaktiver Lernkurs für Bildauflösung, Skalierung, Audio-Digitalisierung und Speicherbedarf-Berechnungen.
 
