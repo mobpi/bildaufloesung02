@@ -1,6 +1,6 @@
 # 🖼️ Bildauflösung & Speicherbedarf - GINF Lernkurs
 
-Interaktiver Lernkurs für Bildauflösung, Skalierung und Speicherbedarf-Berechnungen.
+Interaktiver Lernkurs für Bildauflösung, Skalierung, Audio-Digitalisierung und Speicherbedarf-Berechnungen.
 
 **BPI Mödling - Grundlagen der Informatik (GINF)**
 
@@ -10,16 +10,20 @@ Interaktiver Lernkurs für Bildauflösung, Skalierung und Speicherbedarf-Berechn
 - Einheiten: ppi, px/cm, kB, KiB, MB, MiB
 - Skalierung ohne Resampling
 - Umrechnung ppi ↔ px/cm
-- Speicherbedarf-Berechnungen
+- Bild-Speicherbedarf-Berechnungen
+- Audio-Digitalisierung (Abtastrate, Bittiefe, Kanäle)
+- Nyquist-Theorem
 
 ### Interaktive Simulationen
 - Skalierung ohne Resampling (Pixelanzahl konstant)
-- Speicherbedarf-Visualisierung
+- Bild-Speicherbedarf-Visualisierung
+- Audio-Speicherbedarf-Visualisierung
 
-### Übungsaufgaben (22 Aufgaben, 44 Punkte)
+### Übungsaufgaben (33 Aufgaben, 63 Punkte)
 - **Teil A:** Skalieren ohne Resampling (14 Teilaufgaben)
 - **Teil B:** Umrechnung ppi ↔ px/cm (2 Aufgaben)
-- **Teil C:** Speicherbedarf (16 Teilaufgaben)
+- **Teil C:** Bild-Speicherbedarf (16 Teilaufgaben)
+- **Teil D:** Audio-Digitalisierung (11 Aufgaben)
 
 ### Features
 - 🧮 Fixierter Taschenrechner mit dokumentierten Rechenschritten

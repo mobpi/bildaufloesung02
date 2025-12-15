@@ -1069,7 +1069,7 @@
             studentName: '',
             currentModule: 'welcome',
             points: 0,
-            maxPoints: 44,
+            maxPoints: 63,
             completedModules: new Set(),
             answers: {},
             errors: []
@@ -1082,7 +1082,8 @@
             { id: 'simulation', title: 'Simulationen', icon: '🎮', type: 'simulation' },
             { id: 'aufgabenA', title: 'A) Skalieren ohne Resampling', icon: '🔍', type: 'exercises', group: 'A' },
             { id: 'aufgabenB', title: 'B) Umrechnung ppi ↔ px/cm', icon: '🔄', type: 'exercises', group: 'B' },
-            { id: 'aufgabenC', title: 'C) Speicherbedarf', icon: '💾', type: 'exercises', group: 'C' },
+            { id: 'aufgabenC', title: 'C) Bild-Speicherbedarf', icon: '💾', type: 'exercises', group: 'C' },
+            { id: 'aufgabenD', title: 'D) Audio-Digitalisierung', icon: '🎵', type: 'exercises', group: 'D' },
             { id: 'zusammenfassung', title: 'Zusammenfassung', icon: '📊', type: 'results' }
         ];
         
@@ -1390,6 +1391,116 @@
                     points: 1,
                     solution: 'Datenmenge = 8.000.000 Byte / 1.048.576 ≈ 7,63 MiB'
                 }
+            ],
+            D: [
+                {
+                    id: 23,
+                    question: 'Eine Audio-Datei hat folgende Parameter: Abtastrate 44.100 Hz, Bittiefe 16 Bit, Stereo (2 Kanäle), Dauer 3 Minuten. Berechnen Sie die Datenmenge in MB.',
+                    answer: 31.75,
+                    unit: 'MB',
+                    tolerance: 0.5,
+                    points: 2,
+                    solution: 'Samples = 44.100 Hz × 180 s = 7.938.000 Samples\nDatenmenge = 7.938.000 × 16 Bit × 2 Kanäle = 254.016.000 Bit\n= 31.752.000 Byte = 31,752 MB'
+                },
+                {
+                    id: 24,
+                    question: 'Ein Mono-Audiosignal (1 Kanal) wird mit 48 kHz Abtastrate und 24 Bit Auflösung aufgenommen. Wie groß ist die Datenmenge pro Sekunde in kB?',
+                    answer: 144,
+                    unit: 'kB',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Datenmenge/s = 48.000 Hz × 24 Bit × 1 Kanal = 1.152.000 Bit/s\n= 144.000 Byte/s = 144 kB/s'
+                },
+                {
+                    id: 25,
+                    question: 'Eine CD-Audio hat Standard-Parameter: 44,1 kHz, 16 Bit, Stereo. Wie viele Minuten Musik passen auf eine CD mit 700 MB Kapazität?',
+                    answer: 66.14,
+                    unit: 'Minuten',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Datenrate = 44.100 × 16 × 2 = 1.411.200 Bit/s = 176.400 Byte/s\n700 MB = 700.000.000 Byte\nDauer = 700.000.000 / 176.400 ≈ 3.968 s ≈ 66,14 Minuten'
+                },
+                {
+                    id: 26,
+                    question: 'Ein Podcast wird mit 22.050 Hz, 16 Bit, Mono aufgenommen und ist 45 Minuten lang. Berechnen Sie die unkomprimierte Dateigröße in MiB.',
+                    answer: 113.56,
+                    unit: 'MiB',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Samples = 22.050 Hz × 2.700 s = 59.535.000 Samples\nDatenmenge = 59.535.000 × 16 Bit × 1 = 952.560.000 Bit\n= 119.070.000 Byte = 119.070.000 / 1.048.576 ≈ 113,56 MiB'
+                },
+                {
+                    id: 27,
+                    question: 'Welche Abtastrate (in Hz) ist mindestens erforderlich, um Frequenzen bis 20 kHz korrekt zu digitalisieren? (Nyquist-Theorem)',
+                    answer: 40000,
+                    unit: 'Hz',
+                    tolerance: 100,
+                    points: 1,
+                    solution: 'Nach dem Nyquist-Theorem muss die Abtastrate mindestens doppelt so hoch sein wie die höchste zu erfassende Frequenz:\nAbtastrate ≥ 2 × 20.000 Hz = 40.000 Hz'
+                },
+                {
+                    id: 28,
+                    question: 'Eine Stereo-Aufnahme mit 96 kHz und 24 Bit ist 5 Minuten lang. Wie groß ist die Datei in MB?',
+                    answer: 172.8,
+                    unit: 'MB',
+                    tolerance: 2,
+                    points: 2,
+                    solution: 'Datenmenge = 96.000 Hz × 24 Bit × 2 Kanäle × 300 s\n= 1.382.400.000 Bit = 172.800.000 Byte = 172,8 MB'
+                },
+                {
+                    id: '29a',
+                    question: 'Ein Audio-Interface nimmt mit 192 kHz, 32 Bit Float, 8 Kanäle gleichzeitig auf. Wie hoch ist die Datenrate in MB pro Sekunde?',
+                    answer: 6.144,
+                    unit: 'MB/s',
+                    tolerance: 0.1,
+                    points: 2,
+                    solution: 'Datenrate = 192.000 Hz × 32 Bit × 8 Kanäle = 49.152.000 Bit/s\n= 49.152.000 / 8 = 6.144.000 Byte/s = 6,144 MB/s'
+                },
+                {
+                    id: '29b',
+                    question: 'Wie viele Gigabyte (GB) fallen bei der Aufnahme aus Aufgabe 29a in einer Stunde an?',
+                    answer: 22.12,
+                    unit: 'GB',
+                    tolerance: 0.5,
+                    points: 1,
+                    solution: 'Datenrate = 6,144 MB/s\nPro Stunde = 6,144 × 3.600 = 22.118,4 MB ≈ 22,12 GB'
+                },
+                {
+                    id: 30,
+                    question: 'Eine WAV-Datei (44,1 kHz, 16 Bit, Stereo) ist 52,92 MB groß. Wie lang ist die Aufnahme in Sekunden?',
+                    answer: 300,
+                    unit: 's',
+                    tolerance: 5,
+                    points: 2,
+                    solution: 'Datenrate = 44.100 × 16 × 2 = 1.411.200 Bit/s = 176.400 Byte/s\n52,92 MB = 52.920.000 Byte\nDauer = 52.920.000 / 176.400 = 300 s (= 5 Minuten)'
+                },
+                {
+                    id: 31,
+                    question: 'Ein Sprachrekorder nimmt mit 8 kHz, 8 Bit, Mono auf. Wie viele Stunden Aufnahme passen auf eine 1 GB SD-Karte?',
+                    answer: 34.72,
+                    unit: 'Stunden',
+                    tolerance: 1,
+                    points: 2,
+                    solution: 'Datenrate = 8.000 × 8 × 1 = 64.000 Bit/s = 8.000 Byte/s\n1 GB = 1.000.000.000 Byte\nDauer = 1.000.000.000 / 8.000 = 125.000 s\n= 125.000 / 3.600 ≈ 34,72 Stunden'
+                },
+                {
+                    id: 32,
+                    question: 'Wie viele Quantisierungsstufen hat ein Audio-Signal mit 16 Bit Auflösung?',
+                    answer: 65536,
+                    unit: 'Stufen',
+                    tolerance: 0,
+                    points: 1,
+                    solution: 'Quantisierungsstufen = 2^Bittiefe = 2^16 = 65.536 Stufen'
+                },
+                {
+                    id: 33,
+                    question: 'Ein Vinyl-Rip wird mit 96 kHz / 24 Bit Stereo digitalisiert. Die LP hat 2 Seiten à 22 Minuten. Gesamtgröße in MiB?',
+                    answer: 1450.2,
+                    unit: 'MiB',
+                    tolerance: 20,
+                    points: 2,
+                    solution: 'Gesamtdauer = 44 Min = 2.640 s\nDatenmenge = 96.000 × 24 × 2 × 2.640 = 12.165.120.000 Bit\n= 1.520.640.000 Byte = 1.520.640.000 / 1.048.576 ≈ 1.450,2 MiB'
+                }
             ]
         };
         
@@ -1468,22 +1579,22 @@
             return `
                 <div class="welcome-hero fade-in">
                     <h1>🖼️ Bildauflösung & Speicherbedarf</h1>
-                    <p>Lerne die wichtigsten Berechnungen rund um digitale Bilder: Pixelauflösung, Skalierung ohne Resampling und Speicherbedarf.</p>
+                    <p>Lerne die wichtigsten Berechnungen rund um digitale Bilder und Audio: Pixelauflösung, Skalierung, Abtastrate und Speicherbedarf.</p>
                     <button class="start-btn" onclick="navigateTo('formeln')">Zur Formelsammlung 📐</button>
                 </div>
                 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                     <div class="section" style="text-align: center;">
                         <h2>📐 Formelsammlung</h2>
-                        <p>Alle wichtigen Formeln und Umrechnungen auf einen Blick.</p>
+                        <p>Alle wichtigen Formeln für Bild und Audio auf einen Blick.</p>
                     </div>
                     <div class="section" style="text-align: center;">
                         <h2>🎮 Interaktive Simulationen</h2>
                         <p>Verstehe die Zusammenhänge durch praktische Experimente.</p>
                     </div>
                     <div class="section" style="text-align: center;">
-                        <h2>📝 22 Übungsaufgaben</h2>
-                        <p>Teste dein Wissen mit automatischer Auswertung.</p>
+                        <h2>📝 33 Übungsaufgaben</h2>
+                        <p>Bild- und Audio-Berechnungen mit automatischer Auswertung.</p>
                     </div>
                     <div class="section" style="text-align: center;">
                         <h2>🧮 Integrierter Rechner</h2>
@@ -1633,6 +1744,51 @@
                         </div>
                     </div>
                     
+                    <div class="section" style="border-color: var(--purple);">
+                        <h2 style="color: var(--purple);">🎵 Audio-Digitalisierung</h2>
+                        
+                        <div class="theory-box" style="border-color: var(--purple); background: rgba(168, 85, 247, 0.1);">
+                            <h4 style="color: var(--purple);">Grundbegriffe</h4>
+                            <ul style="margin: 10px 0 0 20px;">
+                                <li><strong>Abtastrate (Sample Rate):</strong> Wie oft pro Sekunde das Signal gemessen wird (in Hz oder kHz)</li>
+                                <li><strong>Bittiefe (Bit Depth):</strong> Genauigkeit jeder Messung (8, 16, 24 Bit)</li>
+                                <li><strong>Kanäle:</strong> Mono = 1, Stereo = 2, Surround = 6+</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="formula-box" style="border-color: var(--purple);">
+                            Datenmenge (Bit) = Abtastrate (Hz) × Bittiefe × Kanäle × Dauer (s)
+                        </div>
+                        
+                        <div class="formula-box" style="border-color: var(--purple);">
+                            Datenrate (Bit/s) = Abtastrate (Hz) × Bittiefe × Kanäle
+                        </div>
+                        
+                        <table class="formula-table">
+                            <tr>
+                                <th>Standard</th>
+                                <th>Abtastrate</th>
+                                <th>Bittiefe</th>
+                                <th>Kanäle</th>
+                            </tr>
+                            <tr><td>Telefon</td><td>8.000 Hz</td><td>8 Bit</td><td>Mono</td></tr>
+                            <tr><td>CD-Audio</td><td>44.100 Hz</td><td>16 Bit</td><td>Stereo</td></tr>
+                            <tr><td>DVD-Audio</td><td>48.000 Hz</td><td>16/24 Bit</td><td>Stereo/5.1</td></tr>
+                            <tr><td>Studio Hi-Res</td><td>96.000 Hz</td><td>24 Bit</td><td>Stereo</td></tr>
+                            <tr><td>Studio Max</td><td>192.000 Hz</td><td>32 Bit</td><td>Mehrkanal</td></tr>
+                        </table>
+                        
+                        <div class="tip-box" style="border-color: var(--purple); background: rgba(168, 85, 247, 0.1);">
+                            <strong>💡 Nyquist-Theorem:</strong> Die Abtastrate muss mindestens <strong>doppelt so hoch</strong> sein wie die höchste zu erfassende Frequenz.<br>
+                            Beispiel: Für 20 kHz (menschliches Hören) → mindestens 40 kHz Abtastrate
+                        </div>
+                        
+                        <div class="warning-box">
+                            <strong>⚠️ Quantisierungsstufen:</strong> Anzahl = 2<sup>Bittiefe</sup><br>
+                            8 Bit = 256 Stufen | 16 Bit = 65.536 Stufen | 24 Bit = 16.777.216 Stufen
+                        </div>
+                    </div>
+                    
                     <div class="nav-buttons">
                         <button class="btn btn-primary" onclick="navigateTo('welcome')">← Zurück</button>
                         <button class="btn btn-success" onclick="navigateTo('simulation')">Zu den Simulationen →</button>
@@ -1691,7 +1847,7 @@
                     </div>
                     
                     <div class="section">
-                        <h2>💾 Simulation 2: Speicherbedarf berechnen</h2>
+                        <h2>💾 Simulation 2: Bild-Speicherbedarf</h2>
                         <p>Verändere die Bildparameter und beobachte, wie sich der Speicherbedarf ändert.</p>
                         
                         <div class="simulator">
@@ -1741,6 +1897,69 @@
                         </div>
                     </div>
                     
+                    <div class="section" style="border-color: var(--purple);">
+                        <h2 style="color: var(--purple);">🎵 Simulation 3: Audio-Speicherbedarf</h2>
+                        <p>Verändere die Audio-Parameter und beobachte, wie sich der Speicherbedarf ändert.</p>
+                        
+                        <div class="simulator" style="border: 1px solid var(--purple);">
+                            <div class="sim-header" style="color: var(--purple);">🎧 Audio-Parameter</div>
+                            <div class="sim-content">
+                                <div class="input-controls">
+                                    <div class="input-row">
+                                        <span class="input-label">Abtastrate:</span>
+                                        <select id="sim3SampleRate" style="padding: 8px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text);">
+                                            <option value="8000">8.000 Hz (Telefon)</option>
+                                            <option value="22050">22.050 Hz (Radio)</option>
+                                            <option value="44100" selected>44.100 Hz (CD)</option>
+                                            <option value="48000">48.000 Hz (DVD)</option>
+                                            <option value="96000">96.000 Hz (Hi-Res)</option>
+                                            <option value="192000">192.000 Hz (Studio)</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Bittiefe:</span>
+                                        <select id="sim3BitDepth" style="padding: 8px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text);">
+                                            <option value="8">8 Bit</option>
+                                            <option value="16" selected>16 Bit</option>
+                                            <option value="24">24 Bit</option>
+                                            <option value="32">32 Bit</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Kanäle:</span>
+                                        <select id="sim3Channels" style="padding: 8px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text);">
+                                            <option value="1">Mono (1)</option>
+                                            <option value="2" selected>Stereo (2)</option>
+                                            <option value="6">5.1 Surround (6)</option>
+                                            <option value="8">7.1 Surround (8)</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-row">
+                                        <span class="input-label">Dauer:</span>
+                                        <div class="slider-container">
+                                            <input type="range" class="slider" id="sim3Duration" min="1" max="600" value="180" step="1">
+                                            <span class="slider-value" id="sim3DurationVal">3:00 min</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim3Bitrate" style="color: var(--purple);">1411</div>
+                                        <div class="output-label">kBit/s</div>
+                                    </div>
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim3MB" style="color: var(--purple);">31.75</div>
+                                        <div class="output-label">MB</div>
+                                    </div>
+                                    <div class="output-display">
+                                        <div class="output-value" id="sim3MiB" style="color: var(--purple);">30.28</div>
+                                        <div class="output-label">MiB</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="section">
                         <h2>🧮 Online-Taschenrechner</h2>
                         <p>Berechne Werte mit dokumentierten Rechenschritten.</p>
@@ -1751,9 +1970,10 @@
                             <div style="margin-bottom: 20px;">
                                 <label style="color: var(--text-muted);">Berechnungstyp:</label>
                                 <select id="calcType" onchange="updateCalculator()" style="padding: 10px 15px; background: var(--bg-card); border: 2px solid var(--bg-light); border-radius: 8px; color: var(--text); margin-left: 10px;">
-                                    <option value="scaling">Skalierung ohne Resampling</option>
-                                    <option value="storage">Speicherbedarf</option>
-                                    <option value="pixels">Pixelanzahl</option>
+                                    <option value="scaling">Bild: Skalierung ohne Resampling</option>
+                                    <option value="storage">Bild: Speicherbedarf</option>
+                                    <option value="pixels">Bild: Pixelanzahl</option>
+                                    <option value="audio">Audio: Speicherbedarf</option>
                                     <option value="convert">Einheiten umrechnen</option>
                                 </select>
                             </div>
@@ -1776,7 +1996,7 @@
         
         function renderExercises(group) {
             const groupExercises = exercises[group];
-            const groupNames = { A: 'Skalieren ohne Resampling', B: 'Umrechnung ppi ↔ px/cm', C: 'Speicherbedarf' };
+            const groupNames = { A: 'Skalieren ohne Resampling', B: 'Umrechnung ppi ↔ px/cm', C: 'Bild-Speicherbedarf', D: 'Audio-Digitalisierung' };
             
             let totalPoints = groupExercises.reduce((sum, ex) => sum + ex.points, 0);
             
@@ -1793,10 +2013,12 @@
                         ${group === 'A' ? `<button class="btn btn-primary" onclick="navigateTo('simulation')">← Simulationen</button>` : ''}
                         ${group === 'B' ? `<button class="btn btn-primary" onclick="navigateTo('aufgabenA')">← Teil A</button>` : ''}
                         ${group === 'C' ? `<button class="btn btn-primary" onclick="navigateTo('aufgabenB')">← Teil B</button>` : ''}
+                        ${group === 'D' ? `<button class="btn btn-primary" onclick="navigateTo('aufgabenC')">← Teil C</button>` : ''}
                         
                         ${group === 'A' ? `<button class="btn btn-success" onclick="navigateTo('aufgabenB')">Teil B →</button>` : ''}
                         ${group === 'B' ? `<button class="btn btn-success" onclick="navigateTo('aufgabenC')">Teil C →</button>` : ''}
-                        ${group === 'C' ? `<button class="btn btn-success" onclick="navigateTo('zusammenfassung')">Zur Auswertung →</button>` : ''}
+                        ${group === 'C' ? `<button class="btn btn-success" onclick="navigateTo('aufgabenD')">Teil D (Audio) →</button>` : ''}
+                        ${group === 'D' ? `<button class="btn btn-success" onclick="navigateTo('zusammenfassung')">Zur Auswertung →</button>` : ''}
                     </div>
                 </div>
             `;
@@ -1840,7 +2062,7 @@
         }
         
         function renderResults() {
-            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C];
+            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C, ...exercises.D];
             const totalExercises = allExercises.length;
             const answeredCount = Object.keys(state.answers).length;
             const correctCount = Object.values(state.answers).filter(a => a.correct).length;
@@ -2127,6 +2349,40 @@
                 updateSim2();
             }
             
+            // Simulator 3: Audio
+            const sim3SampleRate = document.getElementById('sim3SampleRate');
+            const sim3BitDepth = document.getElementById('sim3BitDepth');
+            const sim3Channels = document.getElementById('sim3Channels');
+            const sim3Duration = document.getElementById('sim3Duration');
+            
+            if (sim3SampleRate) {
+                const updateSim3 = () => {
+                    const sampleRate = parseInt(sim3SampleRate.value);
+                    const bitDepth = parseInt(sim3BitDepth.value);
+                    const channels = parseInt(sim3Channels.value);
+                    const duration = parseInt(sim3Duration.value);
+                    
+                    const minutes = Math.floor(duration / 60);
+                    const seconds = duration % 60;
+                    document.getElementById('sim3DurationVal').textContent = `${minutes}:${seconds.toString().padStart(2, '0')} min`;
+                    
+                    const bitrateKbps = (sampleRate * bitDepth * channels) / 1000;
+                    const totalBits = sampleRate * bitDepth * channels * duration;
+                    const mb = totalBits / 8 / 1000000;
+                    const mib = totalBits / 8 / 1048576;
+                    
+                    document.getElementById('sim3Bitrate').textContent = bitrateKbps.toFixed(0);
+                    document.getElementById('sim3MB').textContent = mb.toFixed(2);
+                    document.getElementById('sim3MiB').textContent = mib.toFixed(2);
+                };
+                
+                sim3SampleRate.addEventListener('change', updateSim3);
+                sim3BitDepth.addEventListener('change', updateSim3);
+                sim3Channels.addEventListener('change', updateSim3);
+                sim3Duration.addEventListener('input', updateSim3);
+                updateSim3();
+            }
+            
             // Initialize calculator
             updateCalculator();
         }
@@ -2156,10 +2412,18 @@
                         { id: 'ppi', label: 'Auflösung', unit: 'ppi', default: 300 }
                     ]
                 },
+                audio: {
+                    fields: [
+                        { id: 'sampleRate', label: 'Abtastrate', unit: 'Hz', default: 44100 },
+                        { id: 'bitDepth', label: 'Bittiefe', unit: 'Bit', default: 16 },
+                        { id: 'channels', label: 'Kanäle', unit: '', default: 2 },
+                        { id: 'duration', label: 'Dauer', unit: 's', default: 180 }
+                    ]
+                },
                 convert: {
                     fields: [
                         { id: 'value', label: 'Wert', unit: '', default: 100 },
-                        { id: 'from', label: 'Von', unit: 'px/cm', default: 0, isSelect: true, options: ['px/cm → ppi', 'ppi → px/cm', 'kB → KiB', 'MB → MiB'] }
+                        { id: 'from', label: 'Von', unit: 'px/cm', default: 0, isSelect: true, options: ['px/cm → ppi', 'ppi → px/cm', 'kB → KiB', 'MB → MiB', 'Hz → kHz', 'kHz → Hz'] }
                     ]
                 }
             };
@@ -2250,6 +2514,33 @@
                 ];
                 result = Math.round(pixels) + ' Pixel';
             }
+            else if (type === 'audio') {
+                const sampleRate = parseFloat(document.getElementById('calc_sampleRate').value);
+                const bitDepth = parseFloat(document.getElementById('calc_bitDepth').value);
+                const channels = parseFloat(document.getElementById('calc_channels').value);
+                const duration = parseFloat(document.getElementById('calc_duration').value);
+                
+                const totalSamples = sampleRate * duration;
+                const totalBits = totalSamples * bitDepth * channels;
+                const bytes = totalBits / 8;
+                const kb = bytes / 1000;
+                const mb = bytes / 1000000;
+                const mib = bytes / 1048576;
+                const bitrateKbps = (sampleRate * bitDepth * channels) / 1000;
+                
+                steps = [
+                    `Schritt 1: Samples gesamt`,
+                    `${sampleRate.toLocaleString()} Hz × ${duration} s = ${totalSamples.toLocaleString()} Samples`,
+                    `Schritt 2: Datenmenge in Bit`,
+                    `${totalSamples.toLocaleString()} × ${bitDepth} Bit × ${channels} Kanäle = ${totalBits.toLocaleString()} Bit`,
+                    `Schritt 3: Umrechnung in Byte`,
+                    `${totalBits.toLocaleString()} / 8 = ${bytes.toLocaleString()} Byte`,
+                    `Schritt 4: Ergebnisse`,
+                    `Bitrate: ${bitrateKbps.toFixed(0)} kBit/s`,
+                    `${mb.toFixed(2)} MB | ${mib.toFixed(2)} MiB`
+                ];
+                result = `${mb.toFixed(2)} MB / ${mib.toFixed(2)} MiB`;
+            }
             else if (type === 'convert') {
                 const value = parseFloat(document.getElementById('calc_value').value);
                 const conversion = document.getElementById('calc_from').value;
@@ -2273,6 +2564,14 @@
                     converted = bytes / 1048576;
                     steps = [`${value} MB = ${(value * 1000000).toLocaleString()} Byte`, `${(value * 1000000).toLocaleString()} Byte / 1.048.576 = ${converted.toFixed(4)} MiB`];
                     result = converted.toFixed(4) + ' MiB';
+                } else if (conversion === 'Hz → kHz') {
+                    converted = value / 1000;
+                    steps = [`${value.toLocaleString()} Hz / 1.000 = ${converted.toFixed(3)} kHz`];
+                    result = converted.toFixed(3) + ' kHz';
+                } else if (conversion === 'kHz → Hz') {
+                    converted = value * 1000;
+                    steps = [`${value} kHz × 1.000 = ${converted.toLocaleString()} Hz`];
+                    result = converted.toLocaleString() + ' Hz';
                 }
             }
             
@@ -2323,7 +2622,7 @@
             let y = 20;
             
             // Collect data
-            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C];
+            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C, ...exercises.D];
             const totalExercises = allExercises.length;
             const correctCount = Object.values(state.answers).filter(a => a.correct).length;
             const percentage = Math.round((correctCount / totalExercises) * 100);
@@ -2450,7 +2749,7 @@
         
         // ============ EMAIL FUNCTION ============
         function sendEmail() {
-            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C];
+            const allExercises = [...exercises.A, ...exercises.B, ...exercises.C, ...exercises.D];
             const totalExercises = allExercises.length;
             const correctCount = Object.values(state.answers).filter(a => a.correct).length;
             const percentage = Math.round((correctCount / totalExercises) * 100);
